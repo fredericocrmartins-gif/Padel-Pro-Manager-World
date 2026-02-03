@@ -1,6 +1,52 @@
 
 import { EventType, UserRole, UserProfile, RankingEntry, TrainingExercise, PadelEvent, JoinRequest } from './types';
 
+// --- GEOGRAPHICAL DATA ---
+
+export const PADEL_COUNTRIES = [
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
+  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
+  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
+  { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
+  { code: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'OTHER', name: 'Other / International', flag: '🌍' }
+];
+
+export const PADEL_REGIONS: Record<string, string[]> = {
+  'PT': [
+    'Lisboa', 'Porto', 'Setúbal', 'Braga', 'Aveiro', 'Faro (Algarve)', 'Leiria', 
+    'Coimbra', 'Santarém', 'Viseu', 'Madeira', 'Açores', 'Viana do Castelo', 'Évora'
+  ],
+  'ES': [
+    'Madrid', 'Cataluña (Barcelona)', 'Andalucía (Málaga/Sevilla)', 'Comunidad Valenciana', 
+    'Islas Baleares', 'País Vasco', 'Galicia', 'Castilla y León', 'Canarias', 'Murcia'
+  ],
+  'AR': [
+    'Buenos Aires', 'Córdoba', 'Santa Fe', 'Mendoza', 'Tucumán', 'Entre Ríos', 'Salta'
+  ],
+  'BR': [
+    'São Paulo', 'Rio de Janeiro', 'Santa Catarina', 'Rio Grande do Sul', 'Paraná', 'Minas Gerais', 'Bahia'
+  ],
+  'IT': [
+    'Lombardia (Milano)', 'Lazio (Roma)', 'Sicilia', 'Veneto', 'Emilia-Romagna', 'Piemonte'
+  ],
+  'SE': [
+    'Stockholm', 'Västra Götaland (Gothenburg)', 'Skåne (Malmö)', 'Uppsala'
+  ],
+  'FR': [
+    'Île-de-France (Paris)', 'Occitanie', 'Provence-Alpes-Côte d\'Azur', 'Auvergne-Rhône-Alpes', 'Nouvelle-Aquitaine'
+  ],
+  'US': [
+    'Florida (Miami)', 'California', 'Texas', 'New York', 'Other'
+  ],
+  'OTHER': ['International']
+};
+
+// --- EXISTING MOCK DATA ---
+
 export const MOCK_USER: UserProfile = {
   id: 'u1',
   name: 'Alex Rivera',
@@ -10,6 +56,8 @@ export const MOCK_USER: UserProfile = {
   role: UserRole.ORGANIZER,
   location: 'Miami, FL',
   club: 'Miami Padel Club',
+  country: 'US',
+  state: 'Florida (Miami)',
   isVerified: true,
   stats: {
     winRate: 68,

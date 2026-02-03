@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender } from '../types';
 import { signOut, updateUserProfile } from '../lib/supabase';
+import { PADEL_COUNTRIES, PADEL_REGIONS } from '../constants';
 
 interface ProfileProps {
   user: UserProfile;
@@ -27,10 +28,22 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     racketBrand: user.racketBrand || '',
     // New Fields
     country: user.country || 'PT',
-    city: user.city || '',
+    state: user.state || '', // Using 'state' for Region/District
+    city: user.city || '',   // Free text for specific city
     homeClub: user.homeClub || '',
     division: user.division || 'M3'
   });
+
+  // Effect to reset region if it doesn't match the new country's list (when editing)
+  useEffect(() => {
+    if (isEditing) {
+      const availableRegions = PADEL_REGIONS[formData.country] || [];
+      // If current state is not in the new country list, reset it (unless it's empty)
+      if (formData.state && !availableRegions.includes(formData.state) && availableRegions.length > 0) {
+        setFormData(prev => ({ ...prev, state: '' }));
+      }
+    }
+  }, [formData.country, isEditing]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -56,6 +69,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       phone: formData.phone,
       racketBrand: formData.racketBrand,
       country: formData.country,
+      state: formData.state,
       city: formData.city,
       homeClub: formData.homeClub,
       division: formData.division
@@ -91,6 +105,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     return age;
   };
 
+  // Get regions based on selected country
+  const currentRegions = PADEL_REGIONS[formData.country] || [];
+
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
       
@@ -110,8 +127,11 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                {formData.nickname ? `"${formData.nickname}"` : user.name}
              </h1>
              <p className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
-               {formData.country && <span className="text-xl">{(formData.country === 'PT' ? '🇵🇹' : formData.country === 'ES' ? '🇪🇸' : '🌍')}</span>}
-               {user.role} • {formData.city || user.location}
+               {/* Display Flag */}
+               <span className="text-xl">
+                 {PADEL_COUNTRIES.find(c => c.code === formData.country)?.flag || '🌍'}
+               </span>
+               {user.role} • {formData.state || formData.country}
              </p>
              <div className="flex gap-2 mt-3 justify-center md:justify-start">
                 <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase">
@@ -302,11 +322,12 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               </div>
            </section>
 
-           {/* Competition & Location (NEW SECTION) */}
+           {/* Competition & Location (STANDARDIZED SECTION) */}
            <section className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
               <h3 className="text-lg font-black mb-6 text-text-muted uppercase tracking-widest text-[10px]">Location & Rankings</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {/* COUNTRY SELECT */}
                  <div className="space-y-2">
                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Country</label>
                     <select
@@ -315,26 +336,45 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                        onChange={(e) => setFormData({...formData, country: e.target.value})}
                        className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
                     >
-                       <option value="PT">Portugal (PT)</option>
-                       <option value="ES">Spain (ES)</option>
-                       <option value="BR">Brazil (BR)</option>
-                       <option value="AR">Argentina (AR)</option>
-                       <option value="IT">Italy (IT)</option>
-                       <option value="SE">Sweden (SE)</option>
-                       <option value="FR">France (FR)</option>
-                       <option value="US">USA (US)</option>
+                       {PADEL_COUNTRIES.map(c => (
+                         <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+                       ))}
                     </select>
                  </div>
+
+                 {/* REGION SELECT (DEPENDENT) */}
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">City / Region</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Region / District</label>
+                    <div className="relative">
+                      <select
+                        disabled={!isEditing || currentRegions.length === 0}
+                        value={formData.state}
+                        onChange={(e) => setFormData({...formData, state: e.target.value})}
+                        className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
+                      >
+                         <option value="">Select Region...</option>
+                         {currentRegions.map(region => (
+                           <option key={region} value={region}>{region}</option>
+                         ))}
+                      </select>
+                      {currentRegions.length === 0 && (
+                        <p className="text-[9px] text-text-muted mt-1 ml-2">No regions available for this country.</p>
+                      )}
+                    </div>
+                 </div>
+
+                 {/* CITY INPUT (FREE TEXT) */}
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">City (Specific)</label>
                     <input 
                       disabled={!isEditing}
                       value={formData.city}
                       onChange={(e) => setFormData({...formData, city: e.target.value})}
-                      placeholder="e.g. Lisbon"
+                      placeholder="e.g. Cascais, Sintra..."
                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
                     />
                  </div>
+
                  <div className="space-y-2">
                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Home Club</label>
                     <input 
