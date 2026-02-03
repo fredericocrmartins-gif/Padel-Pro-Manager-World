@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// SAFEGUARD: Helper to retrieve API Key safely from various environment formats (Vite, Next, Process)
+// SAFEGUARD: Helper to retrieve API Key safely from various environment formats
 const getEnvVar = (key: string) => {
   try {
     // @ts-ignore
@@ -14,29 +14,24 @@ const getEnvVar = (key: string) => {
       return import.meta.env[key];
     }
   } catch (e) {
-    console.warn("Environment check failed");
+    return undefined;
   }
   return undefined;
 };
 
-// Check for all common variations of the API Key variable
+// Check for API Key
 const apiKey = 
   getEnvVar('VITE_GEMINI_API_KEY') || 
   getEnvVar('NEXT_PUBLIC_GEMINI_API_KEY') || 
-  getEnvVar('REACT_APP_GEMINI_API_KEY') || 
   getEnvVar('API_KEY');
 
-// Initialize only if we have a key to prevent SDK from throwing fatal errors on load
+// Initialize AI ONLY if key exists. Otherwise null.
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
-if (!apiKey) {
-  console.warn("⚠️ Gemini API Key not found. AI features will run in Demo Mode. Add VITE_GEMINI_API_KEY to your Vercel Environment Variables.");
-}
-
 export async function generateTrainingPlan(userProfile: any) {
+  // 1. If AI is not initialized (No Key), return Mock Data immediately.
   if (!ai) {
-    console.warn("Gemini AI is not initialized. Missing API Key.");
-    // Return a mock plan so the UI doesn't break
+    console.log("Gemini API Key missing. Returning demo plan.");
     return [
       {
         day: "Day 1 (Demo)",
@@ -83,6 +78,7 @@ export async function generateTrainingPlan(userProfile: any) {
     ];
   }
 
+  // 2. Try to generate content if key exists
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
