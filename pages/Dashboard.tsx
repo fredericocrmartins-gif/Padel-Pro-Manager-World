@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MOCK_USER, MOCK_EVENTS } from '../constants';
+import { UserProfile } from '../types';
 import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip, Cell } from 'recharts';
 
 const data = [
@@ -14,16 +14,17 @@ const data = [
 ];
 
 interface DashboardProps {
+  userProfile: UserProfile;
   onStartTournament?: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onStartTournament }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ userProfile, onStartTournament }) => {
   return (
     <div className="p-6 md:p-10 space-y-8 animate-in fade-in duration-500">
       <header className="flex items-center justify-between">
         <div>
           <h2 className="text-text-muted text-sm uppercase tracking-[0.2em] font-bold">Welcome Back</h2>
-          <h1 className="text-3xl font-bold mt-1">{MOCK_USER.name}</h1>
+          <h1 className="text-3xl font-bold mt-1">{userProfile.name}</h1>
         </div>
         <div className="flex -space-x-3">
           {[1, 2, 3].map(i => (
@@ -94,7 +95,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onStartTournament }) => {
           <div className="bg-surface-dark rounded-3xl p-6 border border-border-dark relative overflow-hidden">
              <div className="absolute -top-4 -right-4 size-24 bg-primary/5 rounded-full blur-2xl"></div>
              <p className="text-text-muted text-xs font-bold uppercase mb-2">Win Rate</p>
-             <h4 className="text-4xl font-bold text-primary tracking-tighter">68%</h4>
+             <h4 className="text-4xl font-bold text-primary tracking-tighter">{userProfile.stats.winRate}%</h4>
              <div className="w-full h-1.5 bg-background-dark rounded-full mt-4 overflow-hidden">
                <div className="bg-primary h-full w-[68%]"></div>
              </div>
@@ -102,8 +103,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onStartTournament }) => {
           <div className="bg-surface-dark rounded-3xl p-6 border border-border-dark">
              <p className="text-text-muted text-xs font-bold uppercase mb-2">ELO Rating</p>
              <div className="flex items-baseline gap-2">
-               <h4 className="text-4xl font-bold tracking-tighter">1450</h4>
-               <span className="text-xs font-bold text-primary">+25</span>
+               <h4 className="text-4xl font-bold tracking-tighter">{userProfile.stats.elo}</h4>
+               <span className="text-xs font-bold text-primary">+{userProfile.stats.ytdImprovement}</span>
              </div>
           </div>
         </div>

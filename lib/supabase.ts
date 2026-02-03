@@ -1,244 +1,168 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { MOCK_USER, MOCK_JOIN_REQUESTS } from '../constants';
-import { JoinRequest, RequestStatus, TrainingLog } from '../types';
+import { JoinRequest, RequestStatus, TrainingLog, UserProfile, UserRole } from '../types';
 
 // ------------------------------------------------------------------
-// CONFIGURAÇÃO DE AMBIENTE (VERCEL / PROD)
+// CONFIGURAÇÃO DE AMBIENTE
 // ------------------------------------------------------------------
-// O código agora busca as chaves diretamente das Variáveis de Ambiente.
-// No Vercel: Settings -> Environment Variables
-//
-// Nomes de variáveis suportados:
-// 1. VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (Padrão Vite)
-// 2. REACT_APP_SUPABASE_URL / REACT_APP_SUPABASE_ANON_KEY (Padrão CRA)
-// 3. NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY (Padrão Next.js)
-// ------------------------------------------------------------------
-
 const getEnvVar = (key: string) => {
   try {
     // @ts-ignore
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      return process.env[key];
-    }
+    if (typeof process !== 'undefined' && process.env && process.env[key]) return process.env[key];
     // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-      // @ts-ignore
-      return import.meta.env[key];
-    }
-  } catch {
-    return undefined;
-  }
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) return import.meta.env[key];
+  } catch { return undefined; }
   return undefined;
 };
 
-// Tenta resolver a URL e a KEY usando os prefixos mais comuns
-const supabaseUrl = 
-  getEnvVar('VITE_SUPABASE_URL') || 
-  getEnvVar('REACT_APP_SUPABASE_URL') || 
-  getEnvVar('NEXT_PUBLIC_SUPABASE_URL');
-
-const supabaseKey = 
-  getEnvVar('VITE_SUPABASE_ANON_KEY') || 
-  getEnvVar('REACT_APP_SUPABASE_ANON_KEY') || 
-  getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-
-// Verifica se foi configurado corretamente
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('NEXT_PUBLIC_SUPABASE_URL');
+const supabaseKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 const isConfigured = supabaseUrl && supabaseUrl.startsWith('http') && supabaseKey;
-
-if (!isConfigured) {
-  console.warn('⚠️ SUPABASE: Variáveis de ambiente não encontradas. O app está rodando em modo MOCK (Demonstração). Configure as variáveis no painel da Vercel para persistir dados.');
-}
 
 export const supabase: SupabaseClient | null = isConfigured 
   ? createClient(supabaseUrl, supabaseKey) 
   : null;
 
-// --- MOCK STORAGE (Fallback quando não há Supabase ou erro de conexão) ---
+// --- AUTH FUNCTIONS ---
+
+export const signInWithEmail = async (email: string, password: string) => {
+  if (!supabase) throw new Error("Supabase not configured");
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+};
+
+export const signUpWithEmail = async (email: string, password: string, name: string) => {
+  if (!supabase) throw new Error("Supabase not configured");
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { name: name } // Store name in metadata
+    }
+  });
+  if (error) throw error;
+  return data;
+};
+
+export const signOut = async () => {
+  if (!supabase) return;
+  await supabase.auth.signOut();
+};
+
+export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
+  if (!supabase) return MOCK_USER; // Fallback for dev without keys
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // In a real app, we would fetch extra details from a 'profiles' table.
+  // For this test environment, we construct the profile from Auth Metadata.
+  return {
+    id: user.id,
+    name: user.user_metadata?.name || 'Player',
+    username: user.email?.split('@')[0] || 'user',
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+    skillLevel: 3.5, // Default for new users
+    role: UserRole.PLAYER,
+    location: 'Unknown',
+    stats: {
+      winRate: 0,
+      matchesPlayed: 0,
+      elo: 1200,
+      ytdImprovement: 0
+    }
+  };
+};
+
+
+// --- EXISTING DATA FUNCTIONS (With Mock Fallback) ---
 let localTrainingLogs: TrainingLog[] = [];
 let localJoinRequests: JoinRequest[] = [...MOCK_JOIN_REQUESTS];
 
-/**
- * Saves a training log entry to the Supabase database (or local mock).
- */
 export const saveTrainingLog = async (log: Omit<TrainingLog, 'id' | 'completedAt'>): Promise<TrainingLog> => {
   if (supabase) {
-    const { data, error } = await supabase
-      .from('training_logs')
-      .insert([{
+    // Try to save to DB, if table doesn't exist, it might fail, but that's expected in this test phase
+    try {
+      const { data, error } = await supabase.from('training_logs').insert([{
         user_id: log.userId,
         exercise_id: log.exerciseId,
         duration: log.duration,
         rpe: log.rpe,
         notes: log.notes
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error saving log:', error);
-      throw error;
-    }
-    
-    return {
-      ...data,
-      userId: data.user_id,
-      exerciseId: data.exercise_id,
-      completedAt: data.completed_at
-    } as TrainingLog;
-  } else {
-    // Fallback Mock
-    const newLog: TrainingLog = {
-      id: Math.random().toString(36).substr(2, 9),
-      completedAt: new Date().toISOString(),
-      ...log
-    };
-    localTrainingLogs.push(newLog);
-    return newLog;
+      }]).select().single();
+      
+      if (!error && data) return { ...data, userId: data.user_id, exerciseId: data.exercise_id, completedAt: data.completed_at };
+    } catch (e) { console.warn("Table training_logs might not exist yet"); }
   }
+  
+  // Fallback
+  const newLog: TrainingLog = {
+    id: Math.random().toString(36).substr(2, 9),
+    completedAt: new Date().toISOString(),
+    ...log
+  };
+  localTrainingLogs.push(newLog);
+  return newLog;
 };
 
-/**
- * Retrieves training logs for a specific user from Supabase (or local mock).
- */
 export const getTrainingLogs = async (userId: string): Promise<TrainingLog[]> => {
   if (supabase) {
-    const { data, error } = await supabase
-      .from('training_logs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('completed_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching logs:', error);
-      return [];
+    const { data, error } = await supabase.from('training_logs').select('*').eq('user_id', userId);
+    if (!error && data) {
+      return data.map((d: any) => ({
+        id: d.id,
+        userId: d.user_id,
+        exerciseId: d.exercise_id,
+        duration: d.duration,
+        rpe: d.rpe,
+        notes: d.notes,
+        completedAt: d.completed_at
+      }));
     }
-
-    return data.map((d: any) => ({
-      id: d.id,
-      userId: d.user_id,
-      exerciseId: d.exercise_id,
-      duration: d.duration,
-      rpe: d.rpe,
-      notes: d.notes,
-      completedAt: d.completed_at
-    }));
-  } else {
-    // Fallback Mock
-    return localTrainingLogs.filter(l => l.userId === userId);
   }
+  return localTrainingLogs.filter(l => l.userId === userId);
 };
 
-/**
- * Creates a new join request for a Padel event.
- */
 export const createJoinRequest = async (eventId: string, requesterId: string, message: string): Promise<JoinRequest> => {
   if (supabase) {
-    const { data, error } = await supabase
-      .from('join_requests')
-      .insert([{
+    try {
+      const { data, error } = await supabase.from('join_requests').insert([{
         event_id: eventId,
         requester_id: requesterId,
         status: 'PENDING',
         message: message
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating join request:', error);
-      throw error;
-    }
-
-    return {
-      id: data.id,
-      eventId: data.event_id,
-      requesterId: data.requester_id,
-      status: data.status,
-      message: data.message,
-      createdAt: data.created_at,
-      requester: MOCK_USER 
-    };
-  } else {
-    // Fallback Mock
-    const newReq: JoinRequest = {
-      id: Math.random().toString(36).substr(2, 9),
-      eventId,
-      requesterId,
-      status: 'PENDING',
-      message,
-      createdAt: new Date().toISOString(),
-      requester: MOCK_USER
-    };
-    localJoinRequests.push(newReq);
-    return newReq;
+      }]).select().single();
+      if (!error && data) return {
+        id: data.id, eventId: data.event_id, requesterId: data.requester_id, status: data.status, message: data.message, createdAt: data.created_at, requester: MOCK_USER
+      };
+    } catch (e) {}
   }
+  const newReq: JoinRequest = {
+    id: Math.random().toString(36).substr(2, 9),
+    eventId, requesterId, status: 'PENDING', message, createdAt: new Date().toISOString(), requester: MOCK_USER
+  };
+  localJoinRequests.push(newReq);
+  return newReq;
 };
 
-/**
- * Updates the status (APPROVED/DECLINED) of an existing join request.
- */
 export const updateRequestStatus = async (requestId: string, status: RequestStatus): Promise<boolean> => {
   if (supabase) {
-    const { error } = await supabase
-      .from('join_requests')
-      .update({ status })
-      .eq('id', requestId);
-
-    if (error) {
-      console.error('Error updating status:', error);
-      return false;
-    }
-    return true;
-  } else {
-    // Fallback Mock
-    const req = localJoinRequests.find(r => r.id === requestId);
-    if (req) {
-      req.status = status;
-      return true;
-    }
-    return false;
+    const { error } = await supabase.from('join_requests').update({ status }).eq('id', requestId);
+    if (!error) return true;
   }
+  const req = localJoinRequests.find(r => r.id === requestId);
+  if (req) { req.status = status; return true; }
+  return false;
 };
 
-/**
- * Fetches all join requests associated with a specific event ID.
- */
 export const getJoinRequestsForEvent = async (eventId: string): Promise<JoinRequest[]> => {
   if (supabase) {
-    const { data, error } = await supabase
-      .from('join_requests')
-      .select(`
-        *,
-        requester_id
-      `)
-      .eq('event_id', eventId);
-
-    if (error) {
-      console.error('Error fetching requests:', error);
-      return [];
-    }
-
-    return data.map((d: any) => ({
-      id: d.id,
-      eventId: d.event_id,
-      requesterId: d.requester_id,
-      status: d.status as RequestStatus,
-      message: d.message,
-      createdAt: d.created_at,
-      requester: d.requester_id === MOCK_USER.id 
-        ? MOCK_USER 
-        : { ...MOCK_USER, id: d.requester_id, name: 'Unknown User' }
+    const { data } = await supabase.from('join_requests').select('*').eq('event_id', eventId);
+    if (data) return data.map((d: any) => ({
+      id: d.id, eventId: d.event_id, requesterId: d.requester_id, status: d.status, message: d.message, createdAt: d.created_at, requester: MOCK_USER
     }));
-  } else {
-    // Fallback Mock
-    return localJoinRequests.filter(r => r.eventId === eventId);
   }
-};
-
-/**
- * Returns a mock avatar URL for a given user ID.
- */
-export const getAvatarUrl = (userId: string) => {
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`;
+  return localJoinRequests.filter(r => r.eventId === eventId);
 };
