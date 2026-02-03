@@ -18,14 +18,13 @@ export const Login: React.FC = () => {
     try {
       if (isSignUp) {
         await signUpWithEmail(email, password, name);
-        // Depending on Supabase settings, email confirmation might be required.
-        // If "Enable Email Confirmations" is OFF in Supabase, this logs them in immediately.
-        alert('Account created! You can now sign in.');
-        setIsSignUp(false); // Switch to login view after success
+        alert('Registration successful! Please check your email inbox to confirm your account.');
+        setIsSignUp(false);
       } else {
         await signInWithEmail(email, password);
       }
     } catch (err: any) {
+      // Handle Supabase specific error messages
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
@@ -48,7 +47,7 @@ export const Login: React.FC = () => {
         {/* Toggle Tabs */}
         <div className="flex bg-background-dark p-1 rounded-xl mb-6">
           <button
-            onClick={() => setIsSignUp(false)}
+            onClick={() => { setIsSignUp(false); setError(null); }}
             className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
               !isSignUp ? 'bg-primary text-background-dark shadow-lg' : 'text-text-muted hover:text-white'
             }`}
@@ -56,7 +55,7 @@ export const Login: React.FC = () => {
             Sign In
           </button>
           <button
-            onClick={() => setIsSignUp(true)}
+            onClick={() => { setIsSignUp(true); setError(null); }}
             className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
               isSignUp ? 'bg-primary text-background-dark shadow-lg' : 'text-text-muted hover:text-white'
             }`}
@@ -105,8 +104,19 @@ export const Login: React.FC = () => {
           </div>
 
           {error && (
-            <div className="p-3 bg-secondary/10 border border-secondary/30 rounded-xl text-secondary text-xs font-bold">
-              {error}
+            <div className={`p-4 rounded-xl text-xs font-bold border flex items-center gap-3 ${
+              error.includes("Email not confirmed") 
+                ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500" 
+                : "bg-secondary/10 border-secondary/30 text-secondary"
+            }`}>
+              <span className="material-symbols-outlined text-lg shrink-0">
+                {error.includes("Email not confirmed") ? "mail" : "error"}
+              </span>
+              <div>
+                {error.includes("Email not confirmed") 
+                  ? "Pending verification. Please check your email inbox to confirm your account." 
+                  : error}
+              </div>
             </div>
           )}
 
