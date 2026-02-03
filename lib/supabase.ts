@@ -4,33 +4,57 @@ import { MOCK_USER, MOCK_JOIN_REQUESTS } from '../constants';
 import { JoinRequest, RequestStatus, TrainingLog } from '../types';
 
 // ------------------------------------------------------------------
-// CONFIGURAÇÃO DO SUPABASE
+// CONFIGURAÇÃO DE AMBIENTE (VERCEL / PROD)
 // ------------------------------------------------------------------
-// 1. Vá em Project Settings (ícone de engrenagem) -> API.
-// 2. Copie a "Project URL" e cole na variável abaixo.
-// 3. Copie a chave "anon public" e cole na variável abaixo.
+// O código agora busca as chaves diretamente das Variáveis de Ambiente.
+// No Vercel: Settings -> Environment Variables
+//
+// Nomes de variáveis suportados:
+// 1. VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (Padrão Vite)
+// 2. REACT_APP_SUPABASE_URL / REACT_APP_SUPABASE_ANON_KEY (Padrão CRA)
+// 3. NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY (Padrão Next.js)
 // ------------------------------------------------------------------
 
-// VALORES PADRÃO (PLACEHOLDERS)
-const DEFAULT_URL = 'COLE_A_PROJECT_URL_AQUI';
-const DEFAULT_KEY = 'COLE_A_CHAVE_ANON_PUBLIC_AQUI';
+const getEnvVar = (key: string) => {
+  try {
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+      return process.env[key];
+    }
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+      // @ts-ignore
+      return import.meta.env[key];
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+};
 
-const supabaseUrl = DEFAULT_URL; // Substitua pelo seu se já tiver
-const supabaseKey = DEFAULT_KEY; // Substitua pelo seu se já tiver
+// Tenta resolver a URL e a KEY usando os prefixos mais comuns
+const supabaseUrl = 
+  getEnvVar('VITE_SUPABASE_URL') || 
+  getEnvVar('REACT_APP_SUPABASE_URL') || 
+  getEnvVar('NEXT_PUBLIC_SUPABASE_URL');
 
-// Verifica se as credenciais são válidas (não são os placeholders e parecem URLs reais)
-const isConfigured = (supabaseUrl as string) !== DEFAULT_URL && (supabaseUrl as string).startsWith('http');
+const supabaseKey = 
+  getEnvVar('VITE_SUPABASE_ANON_KEY') || 
+  getEnvVar('REACT_APP_SUPABASE_ANON_KEY') || 
+  getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+
+// Verifica se foi configurado corretamente
+const isConfigured = supabaseUrl && supabaseUrl.startsWith('http') && supabaseKey;
 
 if (!isConfigured) {
-  console.warn('⚠️ SUPABASE NÃO CONFIGURADO: Rodando em modo MOCK (Dados locais). Configure lib/supabase.ts para persistência real.');
+  console.warn('⚠️ SUPABASE: Variáveis de ambiente não encontradas. O app está rodando em modo MOCK (Demonstração). Configure as variáveis no painel da Vercel para persistir dados.');
 }
 
-// Inicializa condicionalmente para evitar crash
 export const supabase: SupabaseClient | null = isConfigured 
   ? createClient(supabaseUrl, supabaseKey) 
   : null;
 
-// --- MOCK STORAGE (Fallback quando não há Supabase) ---
+// --- MOCK STORAGE (Fallback quando não há Supabase ou erro de conexão) ---
 let localTrainingLogs: TrainingLog[] = [];
 let localJoinRequests: JoinRequest[] = [...MOCK_JOIN_REQUESTS];
 
