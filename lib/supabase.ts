@@ -160,11 +160,12 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
   try {
     // Convert CamelCase to snake_case for DB
     const dbUpdates = {
+      id: userId, // Required for upsert
       name: updates.name,
       first_name: updates.firstName,
       last_name: updates.lastName,
       nickname: updates.nickname,
-      birth_date: updates.birthDate,
+      birth_date: updates.birthDate === '' ? null : updates.birthDate, // Convert empty string to null for Date types
       height: updates.height,
       hand: updates.hand,
       gender: updates.gender,
@@ -174,10 +175,11 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       updated_at: new Date().toISOString()
     };
 
-    // Remove undefined values
+    // Remove undefined values (but keep nulls if we want to clear fields)
     Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
 
-    const { error } = await supabase.from('profiles').update(dbUpdates).eq('id', userId);
+    // Use upsert instead of update to create the row if it doesn't exist
+    const { error } = await supabase.from('profiles').upsert(dbUpdates);
     
     if (error) {
       console.error("Error updating profile:", error);

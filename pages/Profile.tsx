@@ -272,8 +272,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                     <input 
                       type="number"
                       disabled={!isEditing}
-                      value={formData.height}
-                      onChange={(e) => setFormData({...formData, height: parseInt(e.target.value)})}
+                      value={formData.height || ''}
+                      onChange={(e) => setFormData({...formData, height: e.target.value ? parseInt(e.target.value) : 0})}
                       placeholder="180"
                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
                     />
