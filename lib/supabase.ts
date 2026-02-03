@@ -39,7 +39,21 @@ export const signUpWithEmail = async (email: string, password: string, name: str
     email,
     password,
     options: {
-      data: { name: name } // Store name in metadata
+      data: { name: name }, // Store name in metadata
+      emailRedirectTo: 'http://localhost:3000' // Explicitly set redirect
+    }
+  });
+  if (error) throw error;
+  return data;
+};
+
+export const resendConfirmationEmail = async (email: string) => {
+  if (!supabase) throw new Error("Supabase not configured");
+  const { data, error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email,
+    options: {
+      emailRedirectTo: 'http://localhost:3000'
     }
   });
   if (error) throw error;

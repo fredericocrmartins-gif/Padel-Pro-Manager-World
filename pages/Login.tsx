@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { signInWithEmail, signUpWithEmail } from '../lib/supabase';
+import React, { useState, useEffect } from 'react';
+import { signInWithEmail, signUpWithEmail, resendConfirmationEmail } from '../lib/supabase';
 
 export const Login: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -9,6 +9,25 @@ export const Login: React.FC = () => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Check for errors in the URL hash (returned by Supabase auth redirects)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1)); // remove #
+      const errorDescription = params.get('error_description');
+      const errorCode = params.get('error_code');
+      
+      if (errorDescription) {
+        setError(decodeURIComponent(errorDescription.replace(/\+/g, ' ')));
+      }
+      // If OTP expired, we definitely want them to know they need to resend
+      if (errorCode === 'otp_expired') {
+        setError('Verification link expired. Please resend the confirmation email.');
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,12 +43,42 @@ export const Login: React.FC = () => {
         await signInWithEmail(email, password);
       }
     } catch (err: any) {
-      // Handle Supabase specific error messages
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleResendEmail = async () => {
+    if (!email) {
+      setError("Please enter your email address first.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await resendConfirmationEmail(email);
+      alert(`Confirmation email resent to ${email}. Please check your inbox.`);
+      setResendCooldown(60); // 60s cooldown
+    } catch (err: any) {
+      setError(err.message || "Failed to resend email.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const showResendButton = error && (
+    error.includes("Email not confirmed") || 
+    error.includes("Verification link expired") ||
+    error.includes("otp_expired")
+  );
 
   return (
     <div className="min-h-screen bg-background-dark flex items-center justify-center p-6 font-body">
@@ -104,19 +153,28 @@ export const Login: React.FC = () => {
           </div>
 
           {error && (
-            <div className={`p-4 rounded-xl text-xs font-bold border flex items-center gap-3 ${
-              error.includes("Email not confirmed") 
+            <div className={`p-4 rounded-xl text-xs font-bold border flex flex-col gap-3 ${
+              showResendButton
                 ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-500" 
                 : "bg-secondary/10 border-secondary/30 text-secondary"
             }`}>
-              <span className="material-symbols-outlined text-lg shrink-0">
-                {error.includes("Email not confirmed") ? "mail" : "error"}
-              </span>
-              <div>
-                {error.includes("Email not confirmed") 
-                  ? "Pending verification. Please check your email inbox to confirm your account." 
-                  : error}
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-lg shrink-0">
+                  {showResendButton ? "mail" : "error"}
+                </span>
+                <div>{error}</div>
               </div>
+              
+              {showResendButton && (
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={loading || resendCooldown > 0}
+                  className="w-full py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 border border-yellow-500/30 rounded-lg uppercase tracking-wider text-[10px] transition-colors disabled:opacity-50"
+                >
+                  {resendCooldown > 0 ? `Wait ${resendCooldown}s` : 'Resend Confirmation Email'}
+                </button>
+              )}
             </div>
           )}
 
