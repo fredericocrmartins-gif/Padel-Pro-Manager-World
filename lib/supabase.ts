@@ -154,8 +154,8 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
   }
 };
 
-export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<boolean> => {
-  if (!supabase) return true; // Mock success
+export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: true }; // Mock success
 
   try {
     // Convert CamelCase to snake_case for DB
@@ -183,12 +183,12 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
     
     if (error) {
       console.error("Error updating profile:", error);
-      return false;
+      return { success: false, error: error.message };
     }
-    return true;
-  } catch (e) {
+    return { success: true };
+  } catch (e: any) {
     console.error("Exception updating profile:", e);
-    return false;
+    return { success: false, error: e.message || "Unknown error" };
   }
 };
 

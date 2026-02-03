@@ -38,25 +38,26 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     // Construct display name from first + last
     const displayName = `${formData.firstName} ${formData.lastName}`.trim();
 
-    const success = await updateUserProfile(user.id, {
+    const result = await updateUserProfile(user.id, {
       name: displayName,
       firstName: formData.firstName,
       lastName: formData.lastName,
       nickname: formData.nickname,
       birthDate: formData.birthDate,
       gender: formData.gender as Gender,
-      height: Number(formData.height),
+      height: Number(formData.height) || 0,
       hand: formData.hand as Hand,
       courtPosition: formData.courtPosition as CourtPosition,
       phone: formData.phone,
       racketBrand: formData.racketBrand
     });
 
-    if (success) {
+    if (result.success) {
       setIsEditing(false);
       if (onUpdate) onUpdate();
     } else {
-      alert("Failed to save profile. Please check the console for details or ensure the database columns exist.");
+      // Show the specific error from Supabase
+      alert(`Error saving profile: ${result.error}\n\nTip: Ensure you have run the SQL script in Supabase to create the new columns (first_name, height, etc).`);
     }
     setIsSaving(false);
   };
