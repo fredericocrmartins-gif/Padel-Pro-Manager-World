@@ -8,6 +8,7 @@ import { Rankings } from './pages/Rankings';
 import { TournamentLive } from './pages/TournamentLive';
 import { Login } from './pages/Login';
 import { AuthSuccess } from './pages/AuthSuccess';
+import { Profile } from './pages/Profile';
 import { supabase, getCurrentUserProfile, signOut } from './lib/supabase';
 import { UserProfile } from './types';
 import { MOCK_USER } from './constants';
@@ -85,6 +86,11 @@ const App: React.FC = () => {
     setShowWelcome(false);
   };
 
+  const refreshProfile = async () => {
+    const profile = await getCurrentUserProfile();
+    if (profile) setUser(profile);
+  };
+
   if (isLoading) {
     return (
       <div className="h-screen w-screen bg-background-dark flex items-center justify-center">
@@ -121,36 +127,7 @@ const App: React.FC = () => {
       case 'tournament':
         return <TournamentLive />;
       case 'profile':
-        return (
-          <div className="p-10 flex flex-col items-center justify-center h-full text-center animate-in fade-in duration-500">
-            <img src={currentUser.avatar} className="size-40 rounded-full border-4 border-primary mb-6" alt="profile"/>
-            <h2 className="text-3xl font-black mb-2">{currentUser.name}</h2>
-            <p className="text-text-muted mb-8 tracking-[0.3em] font-bold uppercase">{currentUser.role} • {currentUser.location}</p>
-            <div className="grid grid-cols-3 gap-8 mb-12">
-               <div className="text-center">
-                 <p className="text-3xl font-black">{currentUser.stats.matchesPlayed}</p>
-                 <p className="text-[10px] font-bold text-text-muted uppercase">Matches</p>
-               </div>
-               <div className="text-center">
-                 <p className="text-3xl font-black">{Math.floor(currentUser.stats.matchesPlayed * (currentUser.stats.winRate / 100))}</p>
-                 <p className="text-[10px] font-bold text-text-muted uppercase">Wins</p>
-               </div>
-               <div className="text-center">
-                 <p className="text-3xl font-black">{currentUser.stats.winRate}%</p>
-                 <p className="text-[10px] font-bold text-text-muted uppercase">Win %</p>
-               </div>
-            </div>
-            <div className="flex gap-4">
-              <button className="px-8 py-3 bg-primary text-background-dark font-black rounded-2xl shadow-lg shadow-primary/20">Edit Profile</button>
-              <button 
-                onClick={handleSignOut}
-                className="px-8 py-3 bg-secondary/10 text-secondary border border-secondary/20 font-black rounded-2xl hover:bg-secondary hover:text-white transition-all"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        );
+        return <Profile user={currentUser} onUpdate={refreshProfile} />;
       default:
         return <Dashboard userProfile={currentUser} onStartTournament={() => setActiveTab('tournament')} />;
     }

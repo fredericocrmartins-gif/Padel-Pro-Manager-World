@@ -94,7 +94,6 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
     ]) as any;
     
     if (error) {
-      // console.log("Auth check info:", error.message);
       return null;
     }
 
@@ -107,12 +106,24 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
         if (profileData) {
             return {
                 id: profileData.id,
+                email: user.email,
                 name: profileData.name || user.user_metadata?.name || 'Player',
+                firstName: profileData.first_name,
+                lastName: profileData.last_name,
+                nickname: profileData.nickname,
+                birthDate: profileData.birth_date,
+                height: profileData.height,
+                hand: profileData.hand,
+                gender: profileData.gender,
+                courtPosition: profileData.court_position,
+                phone: profileData.phone,
+                racketBrand: profileData.racket_brand,
+                
                 username: profileData.email?.split('@')[0] || 'user',
                 avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-                skillLevel: 3.5,
+                skillLevel: 3.5, // Could be stored in DB too
                 role: (profileData.role as UserRole) || UserRole.PLAYER,
-                location: 'Unknown',
+                location: profileData.location || 'Unknown',
                 stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 }
             };
         }
@@ -123,6 +134,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
     // Fallback: construct the profile from Auth Metadata.
     return {
       id: user.id,
+      email: user.email,
       name: user.user_metadata?.name || 'Player',
       username: user.email?.split('@')[0] || 'user',
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
@@ -139,6 +151,42 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
   } catch (e) {
     console.warn("Error or timeout in getCurrentUserProfile:", e);
     return null;
+  }
+};
+
+export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<boolean> => {
+  if (!supabase) return true; // Mock success
+
+  try {
+    // Convert CamelCase to snake_case for DB
+    const dbUpdates = {
+      name: updates.name,
+      first_name: updates.firstName,
+      last_name: updates.lastName,
+      nickname: updates.nickname,
+      birth_date: updates.birthDate,
+      height: updates.height,
+      hand: updates.hand,
+      gender: updates.gender,
+      court_position: updates.courtPosition,
+      phone: updates.phone,
+      racket_brand: updates.racketBrand,
+      updated_at: new Date().toISOString()
+    };
+
+    // Remove undefined values
+    Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
+
+    const { error } = await supabase.from('profiles').update(dbUpdates).eq('id', userId);
+    
+    if (error) {
+      console.error("Error updating profile:", error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Exception updating profile:", e);
+    return false;
   }
 };
 

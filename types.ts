@@ -13,6 +13,9 @@ export enum EventType {
 }
 
 export type RequestStatus = 'PENDING' | 'APPROVED' | 'DECLINED';
+export type Hand = 'RIGHT' | 'LEFT';
+export type CourtPosition = 'LEFT' | 'RIGHT' | 'BOTH';
+export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
 export interface JoinRequest {
   id: string;
@@ -33,7 +36,20 @@ export interface UserStats {
 
 export interface UserProfile {
   id: string;
-  name: string;
+  email?: string;
+  name: string; // Display Name (usually First + Last)
+  firstName?: string;
+  lastName?: string;
+  nickname?: string; // Alcunha
+  birthDate?: string;
+  gender?: Gender;
+  height?: number; // cm
+  weight?: number; // kg (optional, but good for calories)
+  hand?: Hand;
+  courtPosition?: CourtPosition;
+  phone?: string;
+  racketBrand?: string;
+  
   username: string;
   avatar: string;
   skillLevel: number;
