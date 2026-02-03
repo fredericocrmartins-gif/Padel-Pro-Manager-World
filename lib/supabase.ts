@@ -1,56 +1,151 @@
 
-import { MOCK_JOIN_REQUESTS, MOCK_EVENTS, MOCK_USER } from '../constants';
-import { JoinRequest, RequestStatus, TrainingLog, AIPersonalPlan } from '../types';
+import { createClient } from '@supabase/supabase-js';
+import { MOCK_USER } from '../constants';
+import { JoinRequest, RequestStatus, TrainingLog } from '../types';
 
-const MOCK_LOGS: TrainingLog[] = [];
-const MOCK_PLANS: AIPersonalPlan[] = [];
+// ------------------------------------------------------------------
+// CONFIGURAÇÃO DO SUPABASE
+// ------------------------------------------------------------------
+// 1. Vá em Project Settings (ícone de engrenagem) -> API.
+// 2. Copie a "Project URL" e cole na variável abaixo.
+// 3. Copie a chave "anon public" e cole na variável abaixo.
+// ------------------------------------------------------------------
 
-// Track join requests locally to simulate backend persistence during the session
-let localJoinRequests: JoinRequest[] = [...MOCK_JOIN_REQUESTS];
+const supabaseUrl = 'COLE_A_PROJECT_URL_AQUI'; // Ex: https://xyzxyzxyz.supabase.co
+const supabaseKey = 'COLE_A_CHAVE_ANON_PUBLIC_AQUI'; // Ex: eyJhbGciOiJIUzI1NiIsIn...
 
-export const supabase = {
-  auth: {
-    getUser: () => ({ data: { user: { id: 'u1' } }, error: null }),
-    signOut: () => Promise.resolve({ error: null })
-  },
-  from: (table: string) => ({
-    select: (query?: string) => ({
-      eq: (col: string, val: any) => ({
-        single: () => Promise.resolve({ data: null, error: null }),
-        maybeSingle: () => Promise.resolve({ data: null, error: null }),
-      }),
-      order: (col: string, options: any) => Promise.resolve({ data: [], error: null })
-    }),
-    insert: (data: any) => ({
-      select: () => ({ single: () => Promise.resolve({ data, error: null }) })
-    })
-  }),
-  storage: {
-    from: (bucket: string) => ({
-      upload: (path: string, file: File) => Promise.resolve({ data: { path }, error: null }),
-      getPublicUrl: (path: string) => ({ data: { publicUrl: `https://mock-storage.com/${path}` } })
-    })
-  }
-};
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
- * Saves a training log entry to the mock storage.
+ * Saves a training log entry to the Supabase database.
  */
 export const saveTrainingLog = async (log: Omit<TrainingLog, 'id' | 'completedAt'>): Promise<TrainingLog> => {
-  const newLog: TrainingLog = {
-    ...log,
-    id: Math.random().toString(36).substr(2, 9),
-    completedAt: new Date().toISOString()
-  };
-  MOCK_LOGS.push(newLog);
-  return newLog;
+  const { data, error } = await supabase
+    .from('training_logs')
+    .insert([{
+      user_id: log.userId,
+      exercise_id: log.exerciseId,
+      duration: log.duration,
+      rpe: log.rpe,
+      notes: log.notes
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error saving log:', error);
+    throw error;
+  }
+  
+  return {
+    ...data,
+    userId: data.user_id,
+    exerciseId: data.exercise_id,
+    completedAt: data.completed_at
+  } as TrainingLog;
 };
 
 /**
- * Retrieves training logs for a specific user from the mock storage.
+ * Retrieves training logs for a specific user from Supabase.
  */
 export const getTrainingLogs = async (userId: string): Promise<TrainingLog[]> => {
-  return MOCK_LOGS.filter(l => l.userId === userId);
+  const { data, error } = await supabase
+    .from('training_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('completed_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching logs:', error);
+    return [];
+  }
+
+  return data.map((d: any) => ({
+    id: d.id,
+    userId: d.user_id,
+    exerciseId: d.exercise_id,
+    duration: d.duration,
+    rpe: d.rpe,
+    notes: d.notes,
+    completedAt: d.completed_at
+  }));
+};
+
+/**
+ * Creates a new join request for a Padel event in Supabase.
+ */
+export const createJoinRequest = async (eventId: string, requesterId: string, message: string): Promise<JoinRequest> => {
+  const { data, error } = await supabase
+    .from('join_requests')
+    .insert([{
+      event_id: eventId,
+      requester_id: requesterId,
+      status: 'PENDING',
+      message: message
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating join request:', error);
+    throw error;
+  }
+
+  return {
+    id: data.id,
+    eventId: data.event_id,
+    requesterId: data.requester_id,
+    status: data.status,
+    message: data.message,
+    createdAt: data.created_at,
+    requester: MOCK_USER 
+  };
+};
+
+/**
+ * Updates the status (APPROVED/DECLINED) of an existing join request.
+ */
+export const updateRequestStatus = async (requestId: string, status: RequestStatus): Promise<boolean> => {
+  const { error } = await supabase
+    .from('join_requests')
+    .update({ status })
+    .eq('id', requestId);
+
+  if (error) {
+    console.error('Error updating status:', error);
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Fetches all join requests associated with a specific event ID.
+ */
+export const getJoinRequestsForEvent = async (eventId: string): Promise<JoinRequest[]> => {
+  const { data, error } = await supabase
+    .from('join_requests')
+    .select(`
+      *,
+      requester_id
+    `)
+    .eq('event_id', eventId);
+
+  if (error) {
+    console.error('Error fetching requests:', error);
+    return [];
+  }
+
+  return data.map((d: any) => ({
+    id: d.id,
+    eventId: d.event_id,
+    requesterId: d.requester_id,
+    status: d.status as RequestStatus,
+    message: d.message,
+    createdAt: d.created_at,
+    requester: d.requester_id === MOCK_USER.id 
+      ? MOCK_USER 
+      : { ...MOCK_USER, id: d.requester_id, name: 'Unknown User' }
+  }));
 };
 
 /**
@@ -58,43 +153,4 @@ export const getTrainingLogs = async (userId: string): Promise<TrainingLog[]> =>
  */
 export const getAvatarUrl = (userId: string) => {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`;
-};
-
-// Fix: Implement missing join request management functions used in Discovery.tsx
-
-/**
- * Creates a new join request for a Padel event.
- */
-export const createJoinRequest = async (eventId: string, requesterId: string, message: string): Promise<JoinRequest> => {
-  const newRequest: JoinRequest = {
-    id: Math.random().toString(36).substring(2, 9),
-    eventId,
-    requesterId,
-    status: 'PENDING',
-    message,
-    createdAt: new Date().toISOString(),
-    // In this mock, we assume the requester is the current user to populate the profile
-    requester: requesterId === MOCK_USER.id ? MOCK_USER : undefined
-  };
-  localJoinRequests.push(newRequest);
-  return newRequest;
-};
-
-/**
- * Updates the status (APPROVED/DECLINED) of an existing join request.
- */
-export const updateRequestStatus = async (requestId: string, status: RequestStatus): Promise<boolean> => {
-  const index = localJoinRequests.findIndex(r => r.id === requestId);
-  if (index !== -1) {
-    localJoinRequests[index] = { ...localJoinRequests[index], status };
-    return true;
-  }
-  return false;
-};
-
-/**
- * Fetches all join requests associated with a specific event ID.
- */
-export const getJoinRequestsForEvent = async (eventId: string): Promise<JoinRequest[]> => {
-  return localJoinRequests.filter(r => r.eventId === eventId);
 };
