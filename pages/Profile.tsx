@@ -24,7 +24,12 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     height: user.height || 0,
     hand: user.hand || 'RIGHT',
     courtPosition: user.courtPosition || 'BOTH',
-    racketBrand: user.racketBrand || ''
+    racketBrand: user.racketBrand || '',
+    // New Fields
+    country: user.country || 'PT',
+    city: user.city || '',
+    homeClub: user.homeClub || '',
+    division: user.division || 'M3'
   });
 
   const handleSignOut = async () => {
@@ -49,22 +54,24 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       hand: formData.hand as Hand,
       courtPosition: formData.courtPosition as CourtPosition,
       phone: formData.phone,
-      racketBrand: formData.racketBrand
+      racketBrand: formData.racketBrand,
+      country: formData.country,
+      city: formData.city,
+      homeClub: formData.homeClub,
+      division: formData.division
     });
 
     if (result.success) {
       setIsEditing(false);
       if (onUpdate) onUpdate();
     } else {
-      // Intelligent Error Handling to guide the user
+      // Intelligent Error Handling
       let tip = "Ensure you have run the SQL script in Supabase to create the table and columns.";
       
       if (result.error?.includes('updated_at')) {
-        tip = "MISSING COLUMN 'updated_at'.\n\nRun this SQL in Supabase:\nALTER TABLE profiles ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();";
-      } else if (result.error?.includes('first_name')) {
-         tip = "MISSING COLUMNS.\n\nRun this SQL in Supabase:\nALTER TABLE profiles ADD COLUMN IF NOT EXISTS first_name text;";
-      } else if (result.error?.includes('Could not find the')) {
-        tip = "A column is missing in your database. Check the error message above for the column name and add it via Supabase SQL Editor.";
+        tip = "MISSING COLUMN 'updated_at'.\n\nRun the Master Schema SQL script again.";
+      } else if (result.error?.includes('home_club') || result.error?.includes('country')) {
+         tip = "MISSING NEW COLUMNS.\n\nRun the updated SQL script in Supabase to add 'country', 'city', etc.";
       }
 
       alert(`Error saving profile: ${result.error}\n\n----------------\n${tip}`);
@@ -102,9 +109,19 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
              <h1 className="text-3xl font-black mb-1">
                {formData.nickname ? `"${formData.nickname}"` : user.name}
              </h1>
-             <p className="text-text-muted text-sm font-bold uppercase tracking-widest">{user.role} • {user.location}</p>
+             <p className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
+               {formData.country && <span className="text-xl">{(formData.country === 'PT' ? '🇵🇹' : formData.country === 'ES' ? '🇪🇸' : '🌍')}</span>}
+               {user.role} • {formData.city || user.location}
+             </p>
              <div className="flex gap-2 mt-3 justify-center md:justify-start">
-                <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase">Level {user.skillLevel}</span>
+                <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase">
+                  Level {user.skillLevel}
+                </span>
+                {formData.division && (
+                  <span className="px-3 py-1 bg-surface-light text-white border border-border-dark rounded-lg text-[10px] font-black uppercase">
+                    Div {formData.division}
+                  </span>
+                )}
                 {user.isVerified && (
                   <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs">verified</span> Verified
@@ -193,9 +210,21 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                     <p className="text-2xl font-black text-primary">{user.stats.winRate}%</p>
                     <p className="text-[9px] font-bold text-text-muted uppercase mt-1">Win Rate</p>
                  </div>
-                 <div className="bg-background-dark p-4 rounded-2xl text-center col-span-2">
-                    <p className="text-2xl font-black text-white">{user.stats.elo}</p>
-                    <p className="text-[9px] font-bold text-text-muted uppercase mt-1">ELO Rating</p>
+                 <div className="bg-background-dark p-4 rounded-2xl text-center col-span-2 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-2 opacity-10 text-white">
+                      <span className="material-symbols-outlined text-4xl">workspace_premium</span>
+                    </div>
+                    <div className="flex justify-around items-end">
+                      <div>
+                        <p className="text-2xl font-black text-white">{user.stats.elo}</p>
+                        <p className="text-[9px] font-bold text-text-muted uppercase mt-1">ELO Rating</p>
+                      </div>
+                      <div className="h-8 w-px bg-border-dark"></div>
+                      <div>
+                         <p className="text-2xl font-black text-yellow-500">{user.stats.rankingPoints || 0}</p>
+                         <p className="text-[9px] font-bold text-text-muted uppercase mt-1">FIP Points</p>
+                      </div>
+                    </div>
                  </div>
               </div>
            </div>
@@ -268,6 +297,73 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                        <option value="MALE">Male</option>
                        <option value="FEMALE">Female</option>
                        <option value="OTHER">Other</option>
+                    </select>
+                 </div>
+              </div>
+           </section>
+
+           {/* Competition & Location (NEW SECTION) */}
+           <section className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
+              <h3 className="text-lg font-black mb-6 text-text-muted uppercase tracking-widest text-[10px]">Location & Rankings</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Country</label>
+                    <select
+                       disabled={!isEditing}
+                       value={formData.country}
+                       onChange={(e) => setFormData({...formData, country: e.target.value})}
+                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
+                    >
+                       <option value="PT">Portugal (PT)</option>
+                       <option value="ES">Spain (ES)</option>
+                       <option value="BR">Brazil (BR)</option>
+                       <option value="AR">Argentina (AR)</option>
+                       <option value="IT">Italy (IT)</option>
+                       <option value="SE">Sweden (SE)</option>
+                       <option value="FR">France (FR)</option>
+                       <option value="US">USA (US)</option>
+                    </select>
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">City / Region</label>
+                    <input 
+                      disabled={!isEditing}
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      placeholder="e.g. Lisbon"
+                      className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
+                    />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Home Club</label>
+                    <input 
+                      disabled={!isEditing}
+                      value={formData.homeClub}
+                      onChange={(e) => setFormData({...formData, homeClub: e.target.value})}
+                      placeholder="e.g. Padel Center Lisboa"
+                      className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
+                    />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Division / Category</label>
+                    <select
+                       disabled={!isEditing}
+                       value={formData.division}
+                       onChange={(e) => setFormData({...formData, division: e.target.value})}
+                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
+                    >
+                       <option value="M1">M1 (Pro/Adv)</option>
+                       <option value="M2">M2 (High)</option>
+                       <option value="M3">M3 (Medium)</option>
+                       <option value="M4">M4 (Low)</option>
+                       <option value="M5">M5 (Beginner)</option>
+                       <option value="F1">F1 (Pro/Adv)</option>
+                       <option value="F2">F2 (High)</option>
+                       <option value="F3">F3 (Medium)</option>
+                       <option value="F4">F4 (Low)</option>
+                       <option value="F5">F5 (Beginner)</option>
+                       <option value="MIX">Mixed</option>
                     </select>
                  </div>
               </div>

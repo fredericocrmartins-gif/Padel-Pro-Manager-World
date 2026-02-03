@@ -27,16 +27,24 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Se a tabela já existir (ex: criada pela tua query #3), isto adiciona o que falta.
 DO $$
 BEGIN
-    -- Identidade
+    -- Identidade Base
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS first_name text;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_name text;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS nickname text;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone text;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url text;
     
+    -- Localização & Competição (NOVOS CAMPOS)
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS country text DEFAULT 'PT';
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS city text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS state text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS home_club text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS division text; -- ex: M3, F4
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS ranking_points integer DEFAULT 0;
+
     -- Físico
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS birth_date date;
-    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS gender text; -- Constraint adicionada abaixo
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS gender text; 
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS height integer;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS weight numeric;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS hand text;
@@ -48,7 +56,7 @@ BEGIN
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role text DEFAULT 'PLAYER';
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS location text DEFAULT 'Unknown';
     
-    -- O CULPADO DO ERRO: updated_at
+    -- Metadados
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now());
 END $$;
 

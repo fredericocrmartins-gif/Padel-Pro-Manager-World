@@ -32,6 +32,7 @@ export interface UserStats {
   matchesPlayed: number;
   elo: number;
   ytdImprovement: number;
+  rankingPoints?: number; // Pontos oficiais para rankings
 }
 
 export interface UserProfile {
@@ -50,13 +51,20 @@ export interface UserProfile {
   phone?: string;
   racketBrand?: string;
   
+  // New Location & Competitive Fields
+  country?: string;
+  city?: string;
+  state?: string; // Distrito/Região
+  homeClub?: string;
+  division?: string; // ex: M1, M2, F3, Mixed
+
   username: string;
   avatar: string;
   skillLevel: number;
   role: UserRole;
   stats: UserStats;
-  location: string;
-  club?: string;
+  location: string; // General location string (display purpose)
+  club?: string; // Legacy field, mapping to homeClub
   isVerified?: boolean;
 }
 

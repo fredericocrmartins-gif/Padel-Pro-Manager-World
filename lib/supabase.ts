@@ -119,12 +119,25 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
                 phone: profileData.phone,
                 racketBrand: profileData.racket_brand,
                 
+                // New Fields Mapping
+                country: profileData.country,
+                city: profileData.city,
+                state: profileData.state,
+                homeClub: profileData.home_club,
+                division: profileData.division,
+                
                 username: profileData.email?.split('@')[0] || 'user',
                 avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-                skillLevel: 3.5, // Could be stored in DB too
+                skillLevel: profileData.skill_level || 3.5,
                 role: (profileData.role as UserRole) || UserRole.PLAYER,
-                location: profileData.location || 'Unknown',
-                stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 }
+                location: profileData.location || profileData.city || 'Unknown',
+                stats: { 
+                  winRate: 0, 
+                  matchesPlayed: 0, 
+                  elo: 1200, 
+                  ytdImprovement: 0,
+                  rankingPoints: profileData.ranking_points || 0
+                }
             };
         }
     } catch(err) {
@@ -165,17 +178,25 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       first_name: updates.firstName,
       last_name: updates.lastName,
       nickname: updates.nickname,
-      birth_date: updates.birthDate === '' ? null : updates.birthDate, // Convert empty string to null for Date types
+      birth_date: updates.birthDate === '' ? null : updates.birthDate,
       height: updates.height,
       hand: updates.hand,
       gender: updates.gender,
       court_position: updates.courtPosition,
       phone: updates.phone,
       racket_brand: updates.racketBrand,
+      
+      // New Fields
+      country: updates.country,
+      city: updates.city,
+      state: updates.state,
+      home_club: updates.homeClub,
+      division: updates.division,
+      
       updated_at: new Date().toISOString()
     };
 
-    // Remove undefined values (but keep nulls if we want to clear fields)
+    // Remove undefined values
     Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
 
     // Use upsert instead of update to create the row if it doesn't exist
@@ -199,7 +220,6 @@ let localJoinRequests: JoinRequest[] = [...MOCK_JOIN_REQUESTS];
 
 export const saveTrainingLog = async (log: Omit<TrainingLog, 'id' | 'completedAt'>): Promise<TrainingLog> => {
   if (supabase) {
-    // Try to save to DB, if table doesn't exist, it might fail, but that's expected in this test phase
     try {
       const { data, error } = await supabase.from('training_logs').insert([{
         user_id: log.userId,
@@ -213,7 +233,6 @@ export const saveTrainingLog = async (log: Omit<TrainingLog, 'id' | 'completedAt
     } catch (e) { console.warn("Table training_logs might not exist yet"); }
   }
   
-  // Fallback
   const newLog: TrainingLog = {
     id: Math.random().toString(36).substr(2, 9),
     completedAt: new Date().toISOString(),
