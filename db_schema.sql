@@ -1,164 +1,134 @@
 
-/* 
-  -----------------------------------------------------------------------------
-  PADEL PRO MANAGER - MASTER DATABASE SCHEMA
-  -----------------------------------------------------------------------------
-  
-  Como usar:
-  1. Copie todo o conteúdo deste ficheiro.
-  2. Cole no SQL Editor do Supabase.
-  3. Execute (Run).
-
-  Estrutura:
-  [01] PROFILES ........ Perfil do utilizador (ligado ao auth.users)
-  [02] TRAINING LOGS ... Registos de treino
-  [03] JOIN REQUESTS ... Pedidos para entrar em jogos
-  [04] TRIGGERS ........ Automações (ex: criar perfil ao registar, updated_at)
-*/
+-- -----------------------------------------------------------------------------
+-- PADEL PRO MANAGER - MASTER DATABASE SCHEMA (FINAL VERSION)
+-- -----------------------------------------------------------------------------
+-- 
+-- Como usar:
+-- 1. Copie todo o conteúdo.
+-- 2. No Supabase SQL Editor, apague tudo e cole este código.
+-- 3. Execute (Run).
+--
+-- Este script é "Idempotente": corrige tabelas existentes se faltarem colunas
+-- e cria o que não existe, sem apagar dados.
 
 -- ============================================================================
 -- [01] PROFILES
--- Tabela pública que estende os dados do auth.users
 -- ============================================================================
 
+-- 1. Cria a tabela base se não existir
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   email text,
-  name text,                        -- Nome completo (Display Name)
-  
-  -- Campos de Identidade
-  first_name text,
-  last_name text,
-  nickname text,
-  phone text,
-  avatar_url text,
-  
-  -- Campos Físicos e Técnicos
-  birth_date date,
-  gender text CHECK (gender IN ('MALE', 'FEMALE', 'OTHER')),
-  height integer,                   -- em cm
-  weight numeric,                   -- em kg
-  hand text CHECK (hand IN ('RIGHT', 'LEFT')),
-  court_position text CHECK (court_position IN ('LEFT', 'RIGHT', 'BOTH')),
-  racket_brand text,
-  
-  -- Campos de Jogo (SaaS Features)
-  skill_level numeric DEFAULT 3.5,
-  role text DEFAULT 'PLAYER',       -- PLAYER, ORGANIZER, ADMIN
-  location text DEFAULT 'Unknown',
-  
-  -- Metadados
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
+  name text,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- RLS (Row Level Security) para Profiles
+-- 2. GARANTIA DE COLUNAS (Patching)
+-- Se a tabela já existir (ex: criada pela tua query #3), isto adiciona o que falta.
+DO $$
+BEGIN
+    -- Identidade
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS first_name text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_name text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS nickname text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url text;
+    
+    -- Físico
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS birth_date date;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS gender text; -- Constraint adicionada abaixo
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS height integer;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS weight numeric;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS hand text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS court_position text;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS racket_brand text;
+    
+    -- Jogo
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS skill_level numeric DEFAULT 3.5;
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role text DEFAULT 'PLAYER';
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS location text DEFAULT 'Unknown';
+    
+    -- O CULPADO DO ERRO: updated_at
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now());
+END $$;
+
+-- 3. RLS (Segurança)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Política 1: Todos podem ver perfis (necessário para rankings e discovery)
-CREATE POLICY "Public profiles are viewable by everyone" 
-ON public.profiles FOR SELECT 
-USING ( true );
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING ( true );
 
--- Política 2: O utilizador só pode inserir o seu próprio perfil
-CREATE POLICY "Users can insert their own profile" 
-ON public.profiles FOR INSERT 
-WITH CHECK ( auth.uid() = id );
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
+CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK ( auth.uid() = id );
 
--- Política 3: O utilizador só pode editar o seu próprio perfil
-CREATE POLICY "Users can update own profile" 
-ON public.profiles FOR UPDATE 
-USING ( auth.uid() = id );
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING ( auth.uid() = id );
 
 
 -- ============================================================================
 -- [02] TRAINING LOGS
--- Registos de exercícios e treinos dos utilizadores
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.training_logs (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  
-  exercise_id text NOT NULL,        -- ID do exercício (local ou db)
-  duration integer NOT NULL,        -- Minutos
-  rpe integer,                      -- Esforço 1-10
+  exercise_id text NOT NULL,
+  duration integer NOT NULL,
+  rpe integer,
   notes text,
-  
   completed_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- RLS para Training Logs
 ALTER TABLE public.training_logs ENABLE ROW LEVEL SECURITY;
 
--- Política: Utilizadores só veem e criam os seus próprios logs
-CREATE POLICY "Users can CRUD own training logs" 
-ON public.training_logs FOR ALL 
-USING ( auth.uid() = user_id );
+DROP POLICY IF EXISTS "Users can CRUD own training logs" ON public.training_logs;
+CREATE POLICY "Users can CRUD own training logs" ON public.training_logs FOR ALL USING ( auth.uid() = user_id );
 
 
 -- ============================================================================
 -- [03] JOIN REQUESTS
--- Pedidos para participar em eventos/jogos
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.join_requests (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  event_id text NOT NULL,           -- ID do evento (pode virar FK se tiveres tabela events)
+  event_id text NOT NULL,
   requester_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  
-  status text DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'DECLINED')),
+  status text DEFAULT 'PENDING',
   message text,
-  
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 
--- RLS para Join Requests
 ALTER TABLE public.join_requests ENABLE ROW LEVEL SECURITY;
 
--- Política: Todos podem ver pedidos (ou restringe se preferires)
-CREATE POLICY "Requests viewable by participants" 
-ON public.join_requests FOR SELECT 
-USING ( true );
+DROP POLICY IF EXISTS "Requests viewable by participants" ON public.join_requests;
+CREATE POLICY "Requests viewable by participants" ON public.join_requests FOR SELECT USING ( true );
 
--- Política: Apenas utilizadores autenticados criam pedidos
-CREATE POLICY "Auth users can create requests" 
-ON public.join_requests FOR INSERT 
-WITH CHECK ( auth.role() = 'authenticated' );
+DROP POLICY IF EXISTS "Auth users can create requests" ON public.join_requests;
+CREATE POLICY "Auth users can create requests" ON public.join_requests FOR INSERT WITH CHECK ( auth.role() = 'authenticated' );
 
--- Política: Apenas o dono do pedido ou organizador podem atualizar (simplificado aqui)
-CREATE POLICY "Users update own requests" 
-ON public.join_requests FOR UPDATE 
-USING ( true ); -- Nota: Em produção, restringe isto melhor
+DROP POLICY IF EXISTS "Users update own requests" ON public.join_requests;
+CREATE POLICY "Users update own requests" ON public.join_requests FOR UPDATE USING ( true );
 
 
 -- ============================================================================
--- [04] FUNCTIONS & TRIGGERS
--- Automação da base de dados
+-- [04] TRIGGERS & FUNCTIONS
 -- ============================================================================
 
--- Função: Atualizar o campo 'updated_at' automaticamente
-CREATE OR REPLACE FUNCTION public.handle_updated_at() 
-RETURNS TRIGGER AS $$
+-- Função updated_at
+CREATE OR REPLACE FUNCTION public.handle_updated_at() RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
 $$ language 'plpgsql';
 
--- Trigger: Profiles
 DROP TRIGGER IF EXISTS on_profiles_updated ON public.profiles;
-CREATE TRIGGER on_profiles_updated 
-BEFORE UPDATE ON public.profiles 
-FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+CREATE TRIGGER on_profiles_updated BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
 
-
--- Função: Criar Perfil automaticamente ao fazer Sign Up (Auth -> Public)
--- Isto é crucial para que não tenhas erros de "Profile not found" em novos users
-CREATE OR REPLACE FUNCTION public.handle_new_user() 
-RETURNS TRIGGER AS $$
+-- Função New User (Sign Up)
+CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, name, avatar_url)
   VALUES (
@@ -166,14 +136,11 @@ BEGIN
     new.email, 
     COALESCE(new.raw_user_meta_data->>'name', 'New Player'),
     'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.id
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;
 $$ language 'plpgsql' security definer;
 
--- Trigger: Auth Users (Executa sempre que um utilizador é criado no Supabase Auth)
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created 
-AFTER INSERT ON auth.users 
-FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
-
+CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
