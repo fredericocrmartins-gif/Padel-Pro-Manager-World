@@ -68,26 +68,40 @@ export const signOut = async () => {
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
   if (!supabase) return MOCK_USER; // Fallback for dev without keys
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  // In a real app, we would fetch extra details from a 'profiles' table.
-  // For this test environment, we construct the profile from Auth Metadata.
-  return {
-    id: user.id,
-    name: user.user_metadata?.name || 'Player',
-    username: user.email?.split('@')[0] || 'user',
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-    skillLevel: 3.5, // Default for new users
-    role: UserRole.PLAYER,
-    location: 'Unknown',
-    stats: {
-      winRate: 0,
-      matchesPlayed: 0,
-      elo: 1200,
-      ytdImprovement: 0
+  try {
+    // Safe check for user session
+    const { data, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      // If error is just 'missing session', it's fine, return null to show login
+      console.log("Auth check info:", error.message);
+      return null;
     }
-  };
+
+    const user = data?.user;
+    if (!user) return null;
+
+    // In a real app, we would fetch extra details from a 'profiles' table.
+    // For this test environment, we construct the profile from Auth Metadata.
+    return {
+      id: user.id,
+      name: user.user_metadata?.name || 'Player',
+      username: user.email?.split('@')[0] || 'user',
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+      skillLevel: 3.5, // Default for new users
+      role: UserRole.PLAYER,
+      location: 'Unknown',
+      stats: {
+        winRate: 0,
+        matchesPlayed: 0,
+        elo: 1200,
+        ytdImprovement: 0
+      }
+    };
+  } catch (e) {
+    console.error("Unexpected error in getCurrentUserProfile:", e);
+    return null;
+  }
 };
 
 

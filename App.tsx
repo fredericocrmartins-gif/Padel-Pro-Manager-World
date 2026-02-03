@@ -18,11 +18,22 @@ const App: React.FC = () => {
 
   // Auth Effect
   useEffect(() => {
+    let mounted = true;
+
     // 1. Check initial session
     const checkUser = async () => {
-      const profile = await getCurrentUserProfile();
-      setUser(profile);
-      setIsLoading(false);
+      try {
+        const profile = await getCurrentUserProfile();
+        if (mounted) {
+          setUser(profile);
+        }
+      } catch (error) {
+        console.error("Failed to check user session:", error);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
     };
     checkUser();
 
@@ -31,12 +42,17 @@ const App: React.FC = () => {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           const profile = await getCurrentUserProfile();
-          setUser(profile);
+          if (mounted) setUser(profile);
         } else if (event === 'SIGNED_OUT') {
-          setUser(null);
+          if (mounted) setUser(null);
         }
       });
-      return () => subscription.unsubscribe();
+      return () => {
+        mounted = false;
+        subscription.unsubscribe();
+      };
+    } else {
+      mounted = false;
     }
   }, []);
 
@@ -48,7 +64,10 @@ const App: React.FC = () => {
   if (isLoading) {
     return (
       <div className="h-screen w-screen bg-background-dark flex items-center justify-center">
-        <div className="text-primary font-black animate-pulse">LOADING PADELPRO...</div>
+        <div className="flex flex-col items-center gap-4">
+           <div className="text-primary font-black text-2xl animate-pulse tracking-widest">LOADING PADELPRO</div>
+           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
       </div>
     );
   }
