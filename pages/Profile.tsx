@@ -56,7 +56,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       setIsEditing(false);
       if (onUpdate) onUpdate();
     } else {
-      alert("Failed to save profile. Please check your connection.");
+      alert("Failed to save profile. Please check the console for details or ensure the database columns exist.");
     }
     setIsSaving(false);
   };
@@ -199,7 +199,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">First Name (Nome)</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">First Name</label>
                     <input 
                       disabled={!isEditing}
                       value={formData.firstName}
@@ -208,7 +208,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                     />
                  </div>
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Last Name (Apelido)</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Last Name</label>
                     <input 
                       disabled={!isEditing}
                       value={formData.lastName}
@@ -217,7 +217,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                     />
                  </div>
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Nickname (Alcunha)</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Nickname</label>
                     <input 
                       disabled={!isEditing}
                       value={formData.nickname}
@@ -233,7 +233,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       disabled={!isEditing}
                       value={formData.birthDate}
                       onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
-                      className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent text-white" // text-white needed for date input in dark mode
+                      className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent text-white" 
                     />
                  </div>
                  <div className="space-y-2">
