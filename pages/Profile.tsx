@@ -337,7 +337,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                        className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
                     >
                        {PADEL_COUNTRIES.map(c => (
-                         <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+                         <option key={c.code} value={c.code} disabled={c.code === 'sep'}>{c.flag} {c.name}</option>
                        ))}
                     </select>
                  </div>
