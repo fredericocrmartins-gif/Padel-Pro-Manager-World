@@ -69,11 +69,18 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
   if (!supabase) return MOCK_USER; // Fallback for dev without keys
 
   try {
-    // Safe check for user session
-    const { data, error } = await supabase.auth.getUser();
+    // Create a timeout promise that rejects after 5 seconds
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Auth check timed out')), 5000)
+    );
+
+    // Race the auth check against the timeout
+    const { data, error } = await Promise.race([
+      supabase.auth.getUser(),
+      timeoutPromise
+    ]) as any;
     
     if (error) {
-      // If error is just 'missing session', it's fine, return null to show login
       console.log("Auth check info:", error.message);
       return null;
     }
@@ -99,7 +106,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
       }
     };
   } catch (e) {
-    console.error("Unexpected error in getCurrentUserProfile:", e);
+    console.warn("Error or timeout in getCurrentUserProfile:", e);
     return null;
   }
 };

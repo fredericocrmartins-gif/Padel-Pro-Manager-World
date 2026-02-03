@@ -20,6 +20,14 @@ const App: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
+    // Safety timeout: If auth check hangs for more than 6 seconds, force stop loading
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn("Forcing loading completion due to timeout");
+        setIsLoading(false);
+      }
+    }, 6000);
+
     // 1. Check initial session
     const checkUser = async () => {
       try {
@@ -49,10 +57,16 @@ const App: React.FC = () => {
       });
       return () => {
         mounted = false;
+        clearTimeout(safetyTimeout);
         subscription.unsubscribe();
       };
     } else {
-      mounted = false;
+      // If no supabase, clear timeout immediately as checkUser will finish instantly (returning Mock)
+      // but strictly speaking checkUser is async so let's leave it to run
+      return () => {
+         mounted = false;
+         clearTimeout(safetyTimeout);
+      };
     }
   }, []);
 
