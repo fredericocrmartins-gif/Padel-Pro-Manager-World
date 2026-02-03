@@ -7,6 +7,7 @@ import { Training } from './pages/Training';
 import { Rankings } from './pages/Rankings';
 import { TournamentLive } from './pages/TournamentLive';
 import { Login } from './pages/Login';
+import { AuthSuccess } from './pages/AuthSuccess';
 import { supabase, getCurrentUserProfile, signOut } from './lib/supabase';
 import { UserProfile } from './types';
 import { MOCK_USER } from './constants';
@@ -15,10 +16,18 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // Auth Effect
   useEffect(() => {
     let mounted = true;
+
+    // Check URL for Supabase Email Verification markers (access_token + type=signup/recovery)
+    // We check this ON MOUNT before Supabase client strips the hash.
+    const hash = window.location.hash;
+    if (hash && (hash.includes('type=signup') || hash.includes('type=recovery') || hash.includes('type=magiclink'))) {
+      setShowWelcome(true);
+    }
 
     // Safety timeout: If auth check hangs for more than 6 seconds, force stop loading
     const safetyTimeout = setTimeout(() => {
@@ -53,6 +62,7 @@ const App: React.FC = () => {
           if (mounted) setUser(profile);
         } else if (event === 'SIGNED_OUT') {
           if (mounted) setUser(null);
+          setShowWelcome(false);
         }
       });
       return () => {
@@ -62,7 +72,6 @@ const App: React.FC = () => {
       };
     } else {
       // If no supabase, clear timeout immediately as checkUser will finish instantly (returning Mock)
-      // but strictly speaking checkUser is async so let's leave it to run
       return () => {
          mounted = false;
          clearTimeout(safetyTimeout);
@@ -73,6 +82,7 @@ const App: React.FC = () => {
   const handleSignOut = async () => {
     await signOut();
     setUser(null);
+    setShowWelcome(false);
   };
 
   if (isLoading) {
@@ -91,8 +101,12 @@ const App: React.FC = () => {
   }
 
   // Fallback if supabase is not configured, we might show MOCK_USER or still show login if desired.
-  // Current logic: If supabase exists but no user -> Login. If supabase doesn't exist -> Show Mock App.
   const currentUser = user || MOCK_USER;
+
+  // If user just verified email, show the celebration screen
+  if (showWelcome && user) {
+    return <AuthSuccess user={currentUser} onContinue={() => setShowWelcome(false)} />;
+  }
 
   const renderContent = () => {
     switch (activeTab) {
