@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Your Account</title>
+  <style>
+    /* Reset & Basics */
+    body { margin: 0; padding: 0; background-color: #10221e; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    table { border-collapse: collapse; width: 100%; }
+    
+    /* Branding Colors based on App Theme */
+    .bg-dark { background-color: #10221e; }
+    .bg-surface { background-color: #18302b; }
+    .text-white { color: #ffffff; }
+    .text-muted { color: #90cbbc; }
+    .text-primary { color: #25f4c0; }
+    .border-color { border-color: #31685a; }
+    
+    /* Components */
+    .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+    .card { background-color: #18302b; border: 1px solid #31685a; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+    .header-bar { height: 8px; background-color: #25f4c0; width: 100%; }
+    .content { padding: 40px; text-align: center; }
+    
+    /* Typography */
+    h1 { font-size: 24px; font-weight: 800; margin: 0 0 16px 0; letter-spacing: -0.5px; }
+    p { font-size: 16px; line-height: 1.6; margin: 0 0 24px 0; color: #e0e0e0; }
+    
+    /* Logo */
+    .logo-text { font-size: 28px; font-weight: 800; color: #25f4c0; text-decoration: none; letter-spacing: -1px; display: inline-block; margin-bottom: 8px; }
+    
+    /* Button */
+    .btn { 
+      display: inline-block; 
+      background-color: #25f4c0; 
+      color: #10221e; 
+      padding: 16px 32px; 
+      border-radius: 12px; 
+      font-weight: 900; 
+      text-decoration: none; 
+      text-transform: uppercase; 
+      letter-spacing: 1px; 
+      font-size: 14px;
+      margin-top: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px -1px rgba(37, 244, 192, 0.2);
+    }
+    
+    /* Footer */
+    .footer { text-align: center; padding-top: 24px; font-size: 12px; color: #31685a; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+    .link-muted { color: #90cbbc; text-decoration: none; }
+  </style>
+</head>
+<body class="bg-dark">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center" class="bg-dark">
+        <div class="container">
+          
+          <!-- Logo Section -->
+          <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+              <td align="center" style="padding-bottom: 30px;">
+                <span class="logo-text">🎾 PadelPro</span>
+                <div style="font-size: 12px; color: #90cbbc; text-transform: uppercase; letter-spacing: 2px; font-weight: bold;">Manager World App</div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Main Card -->
+          <div class="card">
+            <div class="header-bar"></div>
+            <div class="content">
+              <h1 class="text-white">Welcome directly to Court 1!</h1>
+              <p>You are one step away from joining the ultimate Padel community. Please confirm your email address to unlock full access to rankings, tournaments, and training plans.</p>
+              
+              <!-- Action Button -->
+              <!-- NOTE: {{ .ConfirmationURL }} is the variable Supabase uses to inject the link -->
+              <a href="{{ .ConfirmationURL }}" class="btn">Confirm Account</a>
+              
+              <p style="font-size: 12px; color: #90cbbc; margin-top: 20px;">
+                If you didn't request this email, you can safely ignore it.
+              </p>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="footer">
+            <p>&copy; 2024 Padel Pro Manager. All rights reserved.</p>
+            <p>
+              <a href="#" class="link-muted">Privacy Policy</a> • 
+              <a href="#" class="link-muted">Support</a>
+            </p>
+          </div>
+
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
