@@ -56,8 +56,18 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       setIsEditing(false);
       if (onUpdate) onUpdate();
     } else {
-      // Show the specific error from Supabase
-      alert(`Error saving profile: ${result.error}\n\nTip: Ensure you have run the SQL script in Supabase to create the new columns (first_name, height, etc).`);
+      // Intelligent Error Handling to guide the user
+      let tip = "Ensure you have run the SQL script in Supabase to create the table and columns.";
+      
+      if (result.error?.includes('updated_at')) {
+        tip = "MISSING COLUMN 'updated_at'.\n\nRun this SQL in Supabase:\nALTER TABLE profiles ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();";
+      } else if (result.error?.includes('first_name')) {
+         tip = "MISSING COLUMNS.\n\nRun this SQL in Supabase:\nALTER TABLE profiles ADD COLUMN IF NOT EXISTS first_name text;";
+      } else if (result.error?.includes('Could not find the')) {
+        tip = "A column is missing in your database. Check the error message above for the column name and add it via Supabase SQL Editor.";
+      }
+
+      alert(`Error saving profile: ${result.error}\n\n----------------\n${tip}`);
     }
     setIsSaving(false);
   };
