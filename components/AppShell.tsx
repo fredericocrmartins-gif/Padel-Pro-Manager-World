@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { NAV_ITEMS } from '../constants';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -11,8 +12,15 @@ interface AppShellProps {
 export const AppShell: React.FC<AppShellProps> = ({ children, activeTab, setActiveTab }) => {
   return (
     <div className="flex flex-col h-screen bg-background-dark text-white font-body">
+      {/* DEMO MODE BANNER */}
+      {!isSupabaseConfigured && (
+        <div className="bg-orange-500/90 text-white text-[10px] font-bold uppercase tracking-widest text-center py-1 z-[100] backdrop-blur-sm">
+          ⚠️ Demo Mode: Supabase not connected. Data will not save. Check .env file.
+        </div>
+      )}
+
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex flex-row h-full">
+      <div className="hidden md:flex flex-row flex-1 overflow-hidden">
         <aside className="w-64 bg-surface-dark border-r border-border-dark flex flex-col p-6">
           <div className="flex items-center gap-3 text-primary font-display font-bold text-2xl mb-12">
             <span className="material-symbols-outlined text-3xl">sports_tennis</span>

@@ -18,32 +18,45 @@ const getEnvVar = (key: string) => {
 
 const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('NEXT_PUBLIC_SUPABASE_URL');
 const supabaseKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-const isConfigured = supabaseUrl && supabaseUrl.startsWith('http') && supabaseKey;
+
+// Verify if keys are present and look vaguely correct (not placeholders)
+const isConfigured = supabaseUrl && supabaseUrl.startsWith('http') && 
+                     supabaseKey && supabaseKey.length > 20 &&
+                     !supabaseUrl.includes('sua_url');
+
+export const isSupabaseConfigured = !!isConfigured;
 
 export const supabase: SupabaseClient | null = isConfigured 
   ? createClient(supabaseUrl, supabaseKey) 
   : null;
 
+if (!isConfigured) {
+  console.warn("⚠️ PadelPro: Supabase keys missing or invalid. App running in DEMO MODE with mock data.");
+}
+
 // --- AUTH FUNCTIONS ---
 
 export const signInWithEmail = async (email: string, password: string) => {
-  if (!supabase) throw new Error("Supabase not configured");
+  if (!supabase) throw new Error("Supabase not configured (Demo Mode)");
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 };
 
 export const signUpWithEmail = async (email: string, password: string, name: string) => {
-  if (!supabase) throw new Error("Supabase not configured");
+  if (!supabase) throw new Error("Supabase not configured (Demo Mode)");
+  
+  // 1. Sign Up in Auth
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { name: name }, // Store name in metadata
-      emailRedirectTo: 'http://localhost:3000' // Explicitly set redirect
+      emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
     }
   });
   if (error) throw error;
+
   return data;
 };
 
@@ -53,7 +66,7 @@ export const resendConfirmationEmail = async (email: string) => {
     type: 'signup',
     email: email,
     options: {
-      emailRedirectTo: 'http://localhost:3000'
+      emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
     }
   });
   if (error) throw error;
@@ -81,15 +94,33 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
     ]) as any;
     
     if (error) {
-      console.log("Auth check info:", error.message);
+      // console.log("Auth check info:", error.message);
       return null;
     }
 
     const user = data?.user;
     if (!user) return null;
 
-    // In a real app, we would fetch extra details from a 'profiles' table.
-    // For this test environment, we construct the profile from Auth Metadata.
+    // Try to fetch from 'profiles' table if it exists
+    try {
+        const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        if (profileData) {
+            return {
+                id: profileData.id,
+                name: profileData.name || user.user_metadata?.name || 'Player',
+                username: profileData.email?.split('@')[0] || 'user',
+                avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+                skillLevel: 3.5,
+                role: (profileData.role as UserRole) || UserRole.PLAYER,
+                location: 'Unknown',
+                stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 }
+            };
+        }
+    } catch(err) {
+        // Table probably doesn't exist, ignore and use metadata
+    }
+
+    // Fallback: construct the profile from Auth Metadata.
     return {
       id: user.id,
       name: user.user_metadata?.name || 'Player',
@@ -144,18 +175,20 @@ export const saveTrainingLog = async (log: Omit<TrainingLog, 'id' | 'completedAt
 
 export const getTrainingLogs = async (userId: string): Promise<TrainingLog[]> => {
   if (supabase) {
-    const { data, error } = await supabase.from('training_logs').select('*').eq('user_id', userId);
-    if (!error && data) {
-      return data.map((d: any) => ({
-        id: d.id,
-        userId: d.user_id,
-        exerciseId: d.exercise_id,
-        duration: d.duration,
-        rpe: d.rpe,
-        notes: d.notes,
-        completedAt: d.completed_at
-      }));
-    }
+    try {
+      const { data, error } = await supabase.from('training_logs').select('*').eq('user_id', userId);
+      if (!error && data) {
+        return data.map((d: any) => ({
+          id: d.id,
+          userId: d.user_id,
+          exerciseId: d.exercise_id,
+          duration: d.duration,
+          rpe: d.rpe,
+          notes: d.notes,
+          completedAt: d.completed_at
+        }));
+      }
+    } catch (e) {}
   }
   return localTrainingLogs.filter(l => l.userId === userId);
 };
@@ -184,8 +217,10 @@ export const createJoinRequest = async (eventId: string, requesterId: string, me
 
 export const updateRequestStatus = async (requestId: string, status: RequestStatus): Promise<boolean> => {
   if (supabase) {
-    const { error } = await supabase.from('join_requests').update({ status }).eq('id', requestId);
-    if (!error) return true;
+    try {
+        const { error } = await supabase.from('join_requests').update({ status }).eq('id', requestId);
+        if (!error) return true;
+    } catch(e) {}
   }
   const req = localJoinRequests.find(r => r.id === requestId);
   if (req) { req.status = status; return true; }
@@ -194,10 +229,12 @@ export const updateRequestStatus = async (requestId: string, status: RequestStat
 
 export const getJoinRequestsForEvent = async (eventId: string): Promise<JoinRequest[]> => {
   if (supabase) {
-    const { data } = await supabase.from('join_requests').select('*').eq('event_id', eventId);
-    if (data) return data.map((d: any) => ({
-      id: d.id, eventId: d.event_id, requesterId: d.requester_id, status: d.status, message: d.message, createdAt: d.created_at, requester: MOCK_USER
-    }));
+    try {
+        const { data } = await supabase.from('join_requests').select('*').eq('event_id', eventId);
+        if (data) return data.map((d: any) => ({
+          id: d.id, eventId: d.event_id, requesterId: d.requester_id, status: d.status, message: d.message, createdAt: d.created_at, requester: MOCK_USER
+        }));
+    } catch(e) {}
   }
   return localJoinRequests.filter(r => r.eventId === eventId);
 };
