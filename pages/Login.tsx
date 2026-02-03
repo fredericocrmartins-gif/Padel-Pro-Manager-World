@@ -18,9 +18,10 @@ export const Login: React.FC = () => {
     try {
       if (isSignUp) {
         await signUpWithEmail(email, password, name);
-        // Auto sign-in or wait for email confirm depending on Supabase settings
-        // For simplicity, we assume we can try to sign in or just alert
-        alert('Account created! If email confirmation is enabled, please check your inbox.');
+        // Depending on Supabase settings, email confirmation might be required.
+        // If "Enable Email Confirmations" is OFF in Supabase, this logs them in immediately.
+        alert('Account created! You can now sign in.');
+        setIsSignUp(false); // Switch to login view after success
       } else {
         await signInWithEmail(email, password);
       }
@@ -44,9 +45,29 @@ export const Login: React.FC = () => {
           <p className="text-text-muted text-sm">Your ultimate padel management platform</p>
         </div>
 
+        {/* Toggle Tabs */}
+        <div className="flex bg-background-dark p-1 rounded-xl mb-6">
+          <button
+            onClick={() => setIsSignUp(false)}
+            className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+              !isSignUp ? 'bg-primary text-background-dark shadow-lg' : 'text-text-muted hover:text-white'
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => setIsSignUp(true)}
+            className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+              isSignUp ? 'bg-primary text-background-dark shadow-lg' : 'text-text-muted hover:text-white'
+            }`}
+          >
+            Sign Up
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {isSignUp && (
-             <div className="space-y-2">
+             <div className="space-y-2 animate-in slide-in-from-left duration-300">
                <label className="text-[10px] font-black uppercase text-text-muted tracking-widest">Full Name</label>
                <input 
                  type="text" 
@@ -94,18 +115,13 @@ export const Login: React.FC = () => {
             disabled={loading}
             className="w-full py-4 bg-primary text-background-dark font-black rounded-xl uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
           >
-            {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
+            {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Access Account')}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button 
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-xs text-text-muted hover:text-white font-bold underline transition-colors"
-          >
-            {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-          </button>
-        </div>
+        <p className="text-center text-[10px] text-text-muted mt-6 uppercase tracking-widest">
+          {isSignUp ? 'Join the community today' : 'Welcome back, Champion'}
+        </p>
       </div>
     </div>
   );
