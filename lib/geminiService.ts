@@ -1,27 +1,41 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// SAFEGUARD: Helper to retrieve API Key safely without crashing if 'process' is undefined in browser
-const getApiKey = () => {
+// SAFEGUARD: Helper to retrieve API Key safely from various environment formats (Vite, Next, Process)
+const getEnvVar = (key: string) => {
   try {
     // @ts-ignore
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env.API_KEY;
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+      return process.env[key];
+    }
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+      // @ts-ignore
+      return import.meta.env[key];
     }
   } catch (e) {
-    console.warn("Environment check failed, running without API key.");
+    console.warn("Environment check failed");
   }
   return undefined;
 };
 
-const apiKey = getApiKey();
+// Check for all common variations of the API Key variable
+const apiKey = 
+  getEnvVar('VITE_GEMINI_API_KEY') || 
+  getEnvVar('NEXT_PUBLIC_GEMINI_API_KEY') || 
+  getEnvVar('REACT_APP_GEMINI_API_KEY') || 
+  getEnvVar('API_KEY');
 
 // Initialize only if we have a key to prevent SDK from throwing fatal errors on load
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
+if (!apiKey) {
+  console.warn("⚠️ Gemini API Key not found. AI features will run in Demo Mode. Add VITE_GEMINI_API_KEY to your Vercel Environment Variables.");
+}
+
 export async function generateTrainingPlan(userProfile: any) {
   if (!ai) {
-    console.warn("Gemini AI is not initialized. Missing API Key or process.env.");
+    console.warn("Gemini AI is not initialized. Missing API Key.");
     // Return a mock plan so the UI doesn't break
     return [
       {
@@ -41,6 +55,30 @@ export async function generateTrainingPlan(userProfile: any) {
         activity: "Match Play",
         drills: ["Cross-court rally", "Tie-break situations"],
         focus: "Tactical"
+      },
+      {
+        day: "Day 4 (Demo)",
+        activity: "Rest & Recovery",
+        drills: ["Light stretching", "Video analysis"],
+        focus: "Recovery"
+      },
+      {
+        day: "Day 5 (Demo)",
+        activity: "Technical Drills",
+        drills: ["Serve & Volley", "Chiquita practice"],
+        focus: "Technique"
+      },
+      {
+        day: "Day 6 (Demo)",
+        activity: "Match Simulation",
+        drills: ["Set play", "Pressure points"],
+        focus: "Mental"
+      },
+      {
+        day: "Day 7 (Demo)",
+        activity: "Rest",
+        drills: [],
+        focus: "Rest"
       }
     ];
   }
