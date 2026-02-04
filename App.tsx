@@ -23,62 +23,66 @@ const App: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
-    // Check URL for Supabase Email Verification markers (access_token + type=signup/recovery)
-    // We check this ON MOUNT before Supabase client strips the hash.
+    // Check URL for Supabase Email Verification markers
     const hash = window.location.hash;
     if (hash && (hash.includes('type=signup') || hash.includes('type=recovery') || hash.includes('type=magiclink'))) {
       setShowWelcome(true);
     }
 
-    // Safety timeout: If auth check hangs for more than 6 seconds, force stop loading
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && isLoading) {
-        console.warn("Forcing loading completion due to timeout");
-        setIsLoading(false);
-      }
-    }, 6000);
-
-    // 1. Check initial session
     const checkUser = async () => {
       try {
+        // 1. FAST CHECK: Do we have a local session?
+        // This prevents "flicker" of login screen if we have a valid token in localStorage.
+        if (supabase) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                // Definitely logged out
+                if (mounted) setIsLoading(false);
+                return;
+            }
+        }
+
+        // 2. FULL CHECK: Get profile data (DB fetch)
         const profile = await getCurrentUserProfile();
         if (mounted) {
           setUser(profile);
+          setIsLoading(false);
         }
       } catch (error) {
         console.error("Failed to check user session:", error);
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
+        if (mounted) setIsLoading(false);
       }
     };
+
     checkUser();
 
-    // 2. Listen for Auth changes (Sign In / Sign Out)
+    // 3. Listen for Auth changes (Sign In / Sign Out / Refresh)
     if (supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        // Only refresh profile on explicit sign-in or initial session load, 
+        // OR if token refreshed (keeps session alive in app state)
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          const profile = await getCurrentUserProfile();
-          if (mounted) setUser(profile);
+           // We might already have user from checkUser, but it doesn't hurt to ensure sync
+           if (!user) {
+             const profile = await getCurrentUserProfile();
+             if (mounted) setUser(profile);
+           }
         } else if (event === 'SIGNED_OUT') {
-          if (mounted) setUser(null);
-          setShowWelcome(false);
+          if (mounted) {
+             setUser(null);
+             setShowWelcome(false);
+          }
         }
       });
       return () => {
         mounted = false;
-        clearTimeout(safetyTimeout);
         subscription.unsubscribe();
       };
     } else {
-      // If no supabase, clear timeout immediately as checkUser will finish instantly (returning Mock)
-      return () => {
-         mounted = false;
-         clearTimeout(safetyTimeout);
-      };
+      // Demo Mode
+      setIsLoading(false);
     }
-  }, []);
+  }, []); // Remove dependencies to run only once on mount
 
   const handleSignOut = async () => {
     await signOut();

@@ -120,6 +120,8 @@ export const Login: React.FC = () => {
                <label className="text-[10px] font-black uppercase text-text-muted tracking-widest">Full Name</label>
                <input 
                  type="text" 
+                 name="name"
+                 autoComplete="name"
                  value={name}
                  onChange={(e) => setName(e.target.value)}
                  className="w-full bg-background-dark border border-border-dark rounded-xl p-4 text-white outline-none focus:border-primary transition-colors"
@@ -133,6 +135,8 @@ export const Login: React.FC = () => {
             <label className="text-[10px] font-black uppercase text-text-muted tracking-widest">Email</label>
             <input 
               type="email" 
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-background-dark border border-border-dark rounded-xl p-4 text-white outline-none focus:border-primary transition-colors"
@@ -145,6 +149,8 @@ export const Login: React.FC = () => {
             <label className="text-[10px] font-black uppercase text-text-muted tracking-widest">Password</label>
             <input 
               type="password" 
+              name="password"
+              autoComplete={isSignUp ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-background-dark border border-border-dark rounded-xl p-4 text-white outline-none focus:border-primary transition-colors"

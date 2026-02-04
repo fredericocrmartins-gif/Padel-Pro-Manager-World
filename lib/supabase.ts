@@ -49,7 +49,6 @@ export const signInWithEmail = async (email: string, password: string, rememberM
   
   // NOTE: Supabase v2 client uses the storage defined in createClient by default.
   // We have configured it to use LocalStorage above, so 'Keep me signed in' is active by default.
-  // The 'rememberMe' param is conceptually handled by the persistSession: true config.
   
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
@@ -89,84 +88,98 @@ export const resendConfirmationEmail = async (email: string) => {
 export const signOut = async () => {
   if (!supabase) return;
   await supabase.auth.signOut();
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem('padelpro-auth-token');
+  }
 };
 
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
   if (!supabase) return MOCK_USER; // Fallback for dev without keys
 
   try {
-    // Create a timeout promise that rejects after 5 seconds
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Auth check timed out')), 5000)
-    );
-
-    // Race the auth check against the timeout
-    const { data, error } = await Promise.race([
-      supabase.auth.getUser(),
-      timeoutPromise
-    ]) as any;
+    // ROBUST AUTH CHECK STRATEGY:
+    // 1. First, check Local Storage (getSession). This is fast and works offline.
+    // 2. Only if local session is missing, do we rely strictly on server check.
+    // This prevents "logout" when network is slow or getUser() times out.
     
-    if (error) {
-      return null;
+    const { data: sessionData } = await supabase.auth.getSession();
+    let user = sessionData?.session?.user;
+
+    // If no local session, try server verification as last resort
+    if (!user) {
+       const { data: authData } = await supabase.auth.getUser();
+       user = authData?.user;
     }
 
-    const user = data?.user;
+    // If still no user, we are truly logged out
     if (!user) return null;
 
-    // Try to fetch from 'profiles' table if it exists
+    // --- Profile Fetching ---
+    // We have a user, now let's try to get their profile details.
+    // We wrap this in a gentle timeout so we don't hang forever, 
+    // but if it fails, we fall back to basic Auth Data instead of logging out.
+    
+    let profileData: any = null;
     try {
-        const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        if (profileData) {
-            return {
-                id: profileData.id,
-                email: user.email,
-                name: profileData.name || user.user_metadata?.name || 'Player',
-                firstName: profileData.first_name,
-                lastName: profileData.last_name,
-                nickname: profileData.nickname,
-                birthDate: profileData.birth_date,
-                height: profileData.height,
-                hand: profileData.hand,
-                gender: profileData.gender,
-                courtPosition: profileData.court_position,
-                phone: profileData.phone,
-                racketBrand: profileData.racket_brand,
-                
-                // New Fields Mapping
-                country: profileData.country,
-                city: profileData.city,
-                state: profileData.state,
-                homeClub: profileData.home_club,
-                division: profileData.division,
-                
-                username: profileData.email?.split('@')[0] || 'user',
-                avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-                skillLevel: profileData.skill_level || 3.5,
-                role: (profileData.role as UserRole) || UserRole.PLAYER,
-                location: profileData.location || '', // Set empty by default, not 'Unknown'
-                stats: { 
-                  winRate: 0, 
-                  matchesPlayed: 0, 
-                  elo: 1200, 
-                  ytdImprovement: 0,
-                  rankingPoints: profileData.ranking_points || 0
-                }
-            };
-        }
+        const fetchProfile = supabase.from('profiles').select('*').eq('id', user.id).single();
+        
+        // 5-second timeout for DB fetch only
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 5000));
+        
+        const result = await Promise.race([fetchProfile, timeoutPromise]) as any;
+        profileData = result.data;
     } catch(err) {
-        // Table probably doesn't exist, ignore and use metadata
+        console.warn("Could not fetch full profile (using basic auth info):", err);
     }
 
-    // Fallback: construct the profile from Auth Metadata.
+    if (profileData) {
+        return {
+            id: profileData.id,
+            email: user.email,
+            name: profileData.name || user.user_metadata?.name || 'Player',
+            firstName: profileData.first_name,
+            lastName: profileData.last_name,
+            nickname: profileData.nickname,
+            birthDate: profileData.birth_date,
+            height: profileData.height,
+            hand: profileData.hand,
+            gender: profileData.gender,
+            courtPosition: profileData.court_position,
+            phone: profileData.phone,
+            racketBrand: profileData.racket_brand,
+            
+            // New Fields Mapping
+            country: profileData.country,
+            city: profileData.city,
+            state: profileData.state,
+            homeClub: profileData.home_club,
+            division: profileData.division,
+            
+            username: profileData.email?.split('@')[0] || 'user',
+            avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+            skillLevel: profileData.skill_level || 3.5,
+            role: (profileData.role as UserRole) || UserRole.PLAYER,
+            location: profileData.location || '',
+            stats: { 
+              winRate: 0, 
+              matchesPlayed: 0, 
+              elo: 1200, 
+              ytdImprovement: 0,
+              rankingPoints: profileData.ranking_points || 0
+            }
+        };
+    }
+
+    // Fallback: construct the profile from Auth Metadata if DB fails
     return {
       id: user.id,
       email: user.email,
       name: user.user_metadata?.name || 'Player',
       username: user.email?.split('@')[0] || 'user',
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-      skillLevel: 3.5, // Default for new users
+      skillLevel: 3.5,
       role: UserRole.PLAYER,
-      location: '', // Set empty by default, not 'Unknown'
+      location: '',
       stats: {
         winRate: 0,
         matchesPlayed: 0,
@@ -175,7 +188,9 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
       }
     };
   } catch (e) {
-    console.warn("Error or timeout in getCurrentUserProfile:", e);
+    console.warn("Critical Error in getCurrentUserProfile:", e);
+    // Even on error, if we had a session earlier, we shouldn't return null if possible, 
+    // but here we are in a catch-all.
     return null;
   }
 };
