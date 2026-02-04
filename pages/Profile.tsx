@@ -547,9 +547,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               </div>
            </section>
 
-           {/* Footer Save Action Bar */}
+           {/* Footer Save Action Bar (Static at bottom) */}
            {isEditing && (
-             <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-6 flex justify-end gap-3 sticky bottom-6 shadow-2xl z-20">
+             <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-6 flex justify-end gap-3 mt-8">
                 <button 
                   onClick={() => setIsEditing(false)}
                   className="px-6 py-3 bg-transparent text-text-muted font-bold rounded-2xl hover:text-white transition-all"

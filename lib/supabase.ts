@@ -27,7 +27,15 @@ const isConfigured = supabaseUrl && supabaseUrl.startsWith('http') &&
 export const isSupabaseConfigured = !!isConfigured;
 
 export const supabase: SupabaseClient | null = isConfigured 
-  ? createClient(supabaseUrl, supabaseKey) 
+  ? createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: true, // Force session persistence
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined, // Explicitly use localStorage
+        storageKey: 'padelpro-auth-token' // Custom key to avoid collisions
+      }
+    }) 
   : null;
 
 if (!isConfigured) {
@@ -39,9 +47,9 @@ if (!isConfigured) {
 export const signInWithEmail = async (email: string, password: string, rememberMe: boolean = true) => {
   if (!supabase) throw new Error("Supabase not configured (Demo Mode)");
   
-  // NOTE: Supabase v2 client uses LocalStorage by default which persists the session.
-  // The 'setPersistence' method was removed in v2.
-  // The session will automatically persist (Keep me signed in) unless the user explicitly signs out.
+  // NOTE: Supabase v2 client uses the storage defined in createClient by default.
+  // We have configured it to use LocalStorage above, so 'Keep me signed in' is active by default.
+  // The 'rememberMe' param is conceptually handled by the persistSession: true config.
   
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
