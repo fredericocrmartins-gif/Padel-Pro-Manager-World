@@ -10,6 +10,7 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [rememberMe, setRememberMe] = useState(true);
 
   // Check for errors in the URL hash (returned by Supabase auth redirects)
   useEffect(() => {
@@ -40,7 +41,7 @@ export const Login: React.FC = () => {
         alert('Registration successful! Please check your email inbox to confirm your account.');
         setIsSignUp(false);
       } else {
-        await signInWithEmail(email, password);
+        await signInWithEmail(email, password, rememberMe);
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -151,6 +152,21 @@ export const Login: React.FC = () => {
               required
             />
           </div>
+
+          {!isSignUp && (
+            <div className="flex items-center gap-2 px-1">
+              <input 
+                type="checkbox" 
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="size-4 accent-primary bg-background-dark border-border-dark rounded"
+              />
+              <label htmlFor="rememberMe" className="text-xs text-text-muted font-bold cursor-pointer select-none">
+                Keep me signed in
+              </label>
+            </div>
+          )}
 
           {error && (
             <div className={`p-4 rounded-xl text-xs font-bold border flex flex-col gap-3 ${
