@@ -135,7 +135,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
                 avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
                 skillLevel: profileData.skill_level || 3.5,
                 role: (profileData.role as UserRole) || UserRole.PLAYER,
-                location: profileData.location || profileData.city || 'Unknown',
+                location: profileData.location || '', // Set empty by default, not 'Unknown'
                 stats: { 
                   winRate: 0, 
                   matchesPlayed: 0, 
@@ -158,7 +158,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
       skillLevel: 3.5, // Default for new users
       role: UserRole.PLAYER,
-      location: 'Unknown',
+      location: '', // Set empty by default, not 'Unknown'
       stats: {
         winRate: 0,
         matchesPlayed: 0,
@@ -197,6 +197,8 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       state: updates.state,
       home_club: updates.homeClub,
       division: updates.division,
+      
+      location: updates.location, // Save specific location string
       
       updated_at: new Date().toISOString()
     };

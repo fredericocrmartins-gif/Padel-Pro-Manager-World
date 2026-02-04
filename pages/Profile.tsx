@@ -30,7 +30,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     country: user.country || 'PT',
     state: user.state || '', // Region/District Code
     city: user.city || '',   // Standardized Municipality
-    location: user.location || '', // Optional Specific Location (e.g. Neighbourhood) - Defaults to empty
+    location: (user.location === 'Unknown' || !user.location) ? '' : user.location, // Ensure 'Unknown' is treated as empty
     
     homeClub: user.homeClub || '',
     division: user.division || 'M3'
