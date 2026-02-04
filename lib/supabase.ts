@@ -39,12 +39,10 @@ if (!isConfigured) {
 export const signInWithEmail = async (email: string, password: string, rememberMe: boolean = true) => {
   if (!supabase) throw new Error("Supabase not configured (Demo Mode)");
   
-  // Explicitly set persistence based on user preference
-  // Use native browser Storage objects which conform to Supabase's SupportedStorage interface
-  if (typeof window !== 'undefined') {
-    await supabase.auth.setPersistence(rememberMe ? window.localStorage : window.sessionStorage);
-  }
-
+  // NOTE: Supabase v2 client uses LocalStorage by default which persists the session.
+  // The 'setPersistence' method was removed in v2.
+  // The session will automatically persist (Keep me signed in) unless the user explicitly signs out.
+  
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
