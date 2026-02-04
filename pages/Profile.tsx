@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender } from '../types';
 import { signOut, updateUserProfile } from '../lib/supabase';
-import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES } from '../constants';
+import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES, PADEL_CLUBS } from '../constants';
 
 interface ProfileProps {
   user: UserProfile;
@@ -30,7 +30,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     country: user.country || 'PT',
     state: user.state || '', // Region/District Code
     city: user.city || '',   // Standardized Municipality
-    location: user.location || '', // Optional Specific Location (e.g. Neighbourhood)
+    location: user.location || '', // Optional Specific Location (e.g. Neighbourhood) - Defaults to empty
     
     homeClub: user.homeClub || '',
     division: user.division || 'M3'
@@ -39,6 +39,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   // Derived Lists
   const currentRegions = PADEL_REGIONS[formData.country] || [];
   const currentCities = formData.state ? PADEL_CITIES[formData.state] || [] : [];
+  const currentCountryInfo = PADEL_COUNTRIES.find(c => c.code === formData.country);
+  const dialCode = currentCountryInfo?.dialCode || '+??';
 
   // Handlers for Location Cascading Updates
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -126,7 +128,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   };
 
   return (
-    <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       
       {/* Header */}
       <header className="flex flex-col md:flex-row items-center justify-between gap-6 bg-surface-dark p-8 rounded-[3rem] border border-border-dark relative overflow-hidden">
@@ -313,16 +315,25 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent text-white" 
                     />
                  </div>
+                 
+                 {/* Phone Input with Country Code Prefix */}
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Phone</label>
-                    <input 
-                      type="tel"
-                      disabled={!isEditing}
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
-                    />
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Phone (Optional)</label>
+                    <div className="flex gap-2">
+                      <div className="w-20 bg-background-dark border border-border-dark rounded-xl flex items-center justify-center text-sm font-bold text-text-muted select-none">
+                        {dialCode}
+                      </div>
+                      <input 
+                        type="tel"
+                        disabled={!isEditing}
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})}
+                        placeholder="912345678"
+                        className="flex-1 bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
+                      />
+                    </div>
                  </div>
+
                  <div className="space-y-2">
                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Gender</label>
                     <select
@@ -408,28 +419,37 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                     )}
                  </div>
 
-                 {/* SPECIFIC LOCATION (OPTIONAL) */}
+                 {/* SPECIFIC LOCATION (OPTIONAL) - Default Empty */}
                  <div className="space-y-2">
                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Neighbourhood (Optional)</label>
                     <input 
                       disabled={!isEditing}
                       value={formData.location}
                       onChange={(e) => setFormData({...formData, location: e.target.value})}
-                      placeholder="e.g. Quinta da Marinha, Expo..."
+                      placeholder="" 
                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
                     />
                  </div>
 
+                 {/* HOME CLUB SELECT - MOCK DB INTEGRATION */}
                  <div className="space-y-2">
                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Home Club</label>
-                    <input 
-                      disabled={!isEditing}
-                      value={formData.homeClub}
-                      onChange={(e) => setFormData({...formData, homeClub: e.target.value})}
-                      placeholder="e.g. Padel Center Lisboa"
-                      className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
-                    />
+                    <div className="relative">
+                      <select 
+                        disabled={!isEditing}
+                        value={formData.homeClub}
+                        onChange={(e) => setFormData({...formData, homeClub: e.target.value})}
+                        className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
+                      >
+                         <option value="">Select your Club...</option>
+                         {PADEL_CLUBS.map(club => (
+                           <option key={club} value={club}>{club}</option>
+                         ))}
+                      </select>
+                      {/* Search Icon or Arrow could go here */}
+                    </div>
                  </div>
+
                  <div className="space-y-2">
                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Division / Category</label>
                     <select
@@ -520,6 +540,26 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                  </div>
               </div>
            </section>
+
+           {/* Footer Save Action Bar (Duplicated for convenience) */}
+           {isEditing && (
+             <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-6 flex justify-end gap-3 sticky bottom-6 shadow-2xl z-20">
+                <button 
+                  onClick={() => setIsEditing(false)}
+                  className="px-6 py-3 bg-transparent text-text-muted font-bold rounded-2xl hover:text-white transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="px-8 py-3 bg-primary text-background-dark font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all flex items-center gap-2"
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  <span className="material-symbols-outlined text-lg">save</span>
+                </button>
+             </div>
+           )}
         </div>
       </div>
     </div>
