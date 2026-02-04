@@ -6,6 +6,7 @@ import { Discovery } from './pages/Discovery';
 import { Training } from './pages/Training';
 import { Rankings } from './pages/Rankings';
 import { TournamentLive } from './pages/TournamentLive';
+import { Clubs } from './pages/Clubs';
 import { Login } from './pages/Login';
 import { AuthSuccess } from './pages/AuthSuccess';
 import { Profile } from './pages/Profile';
@@ -130,6 +131,8 @@ const App: React.FC = () => {
         return <Rankings />;
       case 'tournament':
         return <TournamentLive />;
+      case 'clubs':
+        return <Clubs />;
       case 'profile':
         return <Profile user={currentUser} onUpdate={refreshProfile} />;
       default:

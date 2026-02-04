@@ -1,7 +1,7 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { MOCK_USER, MOCK_JOIN_REQUESTS } from '../constants';
-import { JoinRequest, RequestStatus, TrainingLog, UserProfile, UserRole } from '../types';
+import { MOCK_USER, MOCK_JOIN_REQUESTS, MOCK_CLUBS_DATA } from '../constants';
+import { JoinRequest, RequestStatus, TrainingLog, UserProfile, UserRole, Club } from '../types';
 
 // ------------------------------------------------------------------
 // CONFIGURAÇÃO DE AMBIENTE
@@ -241,6 +241,39 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
     console.error("Exception updating profile:", e);
     return { success: false, error: e.message || "Unknown error" };
   }
+};
+
+// --- CLUB FUNCTIONS ---
+
+export const getClubs = async (): Promise<Club[]> => {
+  if (supabase) {
+    try {
+      // Try to fetch from DB
+      const { data, error } = await supabase.from('clubs').select('*');
+      if (!error && data && data.length > 0) {
+        return data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          country: c.country,
+          city: c.city,
+          address: c.address,
+          type: c.type,
+          courtCount: c.court_count,
+          hasParking: c.has_parking,
+          hasShowers: c.has_showers,
+          hasBar: c.has_bar,
+          hasShop: c.has_shop,
+          phone: c.phone,
+          email: c.email,
+          website: c.website,
+          image: c.image_url || 'https://picsum.photos/seed/default/600/400'
+        }));
+      }
+    } catch (e) {
+      console.warn("Could not fetch clubs from DB, using mock data");
+    }
+  }
+  return MOCK_CLUBS_DATA;
 };
 
 

@@ -1,5 +1,5 @@
 
-import { EventType, UserRole, UserProfile, RankingEntry, TrainingExercise, PadelEvent, JoinRequest } from './types';
+import { EventType, UserRole, UserProfile, RankingEntry, TrainingExercise, PadelEvent, JoinRequest, Club } from './types';
 
 // --- GEOGRAPHICAL DATA (ISO 3166 STANDARDS) ---
 
@@ -297,7 +297,7 @@ export const PADEL_CITIES: Record<string, string[]> = {
   ]
 };
 
-// --- MOCK CLUBS DATABASE ---
+// --- MOCK CLUBS DATABASE (LEGACY STRING ARRAY) ---
 export const PADEL_CLUBS: string[] = [
   'Padel Center Lisboa',
   'Airfut Padel',
@@ -314,6 +314,87 @@ export const PADEL_CLUBS: string[] = [
   'W Padel Country Club',
   'My Padel Center',
   'Star Padel'
+];
+
+// --- RICH CLUB DATA FOR CLUBS PAGE ---
+export const MOCK_CLUBS_DATA: Club[] = [
+  {
+    id: 'c1',
+    name: 'Padel Center Lisboa',
+    country: 'PT',
+    city: 'Lisboa',
+    address: 'Av. Ceuta Norte, 1300-125 Lisboa',
+    image: 'https://picsum.photos/seed/c1/600/400',
+    type: 'INDOOR',
+    courtCount: 12,
+    hasParking: true,
+    hasShowers: true,
+    hasBar: true,
+    hasShop: true,
+    phone: '+351 21 364 0000',
+    website: 'https://padelcenter.pt',
+    email: 'info@padelcenter.pt',
+    openingHours: { weekDays: '08:00 - 00:00', weekends: '09:00 - 22:00' }
+  } as any, // casting to avoid strict type checks on optional fields during mock
+  {
+    id: 'c2',
+    name: 'Airfut Padel',
+    country: 'PT',
+    city: 'Loures',
+    address: 'Rua do Prior Velho, Loures',
+    image: 'https://picsum.photos/seed/c2/600/400',
+    type: 'INDOOR',
+    courtCount: 8,
+    hasParking: true,
+    hasShowers: true,
+    hasBar: true,
+    hasShop: false,
+    phone: '+351 91 111 2222',
+  } as any,
+  {
+    id: 'c3',
+    name: 'Quinta da Marinha Racket Club',
+    country: 'PT',
+    city: 'Cascais',
+    address: 'Rua das Palmeiras, Cascais',
+    image: 'https://picsum.photos/seed/c3/600/400',
+    type: 'OUTDOOR',
+    courtCount: 10,
+    hasParking: true,
+    hasShowers: true,
+    hasBar: true,
+    hasShop: true,
+    phone: '+351 21 486 0000',
+    website: 'https://qmracketclub.pt'
+  } as any,
+  {
+    id: 'c4',
+    name: 'LX Indoor Padel',
+    country: 'PT',
+    city: 'Lisboa',
+    address: 'Rua da Fábrica, Lisboa',
+    image: 'https://picsum.photos/seed/c4/600/400',
+    type: 'INDOOR',
+    courtCount: 6,
+    hasParking: false,
+    hasShowers: true,
+    hasBar: false,
+    hasShop: true,
+  } as any,
+  {
+    id: 'c5',
+    name: 'Vilamoura Tennis & Padel Academy',
+    country: 'PT',
+    city: 'Faro',
+    address: 'Vilamoura Resort, Algarve',
+    image: 'https://picsum.photos/seed/c5/600/400',
+    type: 'OUTDOOR',
+    courtCount: 14,
+    hasParking: true,
+    hasShowers: true,
+    hasBar: true,
+    hasShop: true,
+  } as any
 ];
 
 // --- EXISTING MOCK DATA ---
@@ -415,6 +496,7 @@ export const MOCK_JOIN_REQUESTS: JoinRequest[] = [
 export const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: 'home' },
   { id: 'discovery', label: 'Explore', icon: 'explore' },
+  { id: 'clubs', label: 'Clubs', icon: 'domain' },
   { id: 'training', label: 'Training', icon: 'fitness_center' },
   { id: 'rankings', label: 'Rankings', icon: 'trophy' },
   { id: 'profile', label: 'Profile', icon: 'person' }

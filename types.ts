@@ -17,6 +17,39 @@ export type Hand = 'RIGHT' | 'LEFT';
 export type CourtPosition = 'LEFT' | 'RIGHT' | 'BOTH';
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
+export interface Club {
+  id: string;
+  name: string;
+  description?: string;
+  logo?: string;
+  image?: string;
+  
+  // Location
+  country: string;
+  city: string;
+  address: string;
+  googleMapsUrl?: string;
+
+  // Contacts
+  phone?: string;
+  email?: string;
+  website?: string;
+
+  // Facilities
+  type: 'INDOOR' | 'OUTDOOR' | 'COVERED' | 'MIXED';
+  courtCount: number;
+  hasParking: boolean;
+  hasShowers: boolean;
+  hasBar: boolean;
+  hasShop: boolean;
+
+  // Operational
+  openingHours?: {
+    weekdays: string;
+    weekends: string;
+  };
+}
+
 export interface JoinRequest {
   id: string;
   eventId: string;

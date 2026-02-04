@@ -121,7 +121,47 @@ CREATE POLICY "Users update own requests" ON public.join_requests FOR UPDATE USI
 
 
 -- ============================================================================
--- [04] TRIGGERS & FUNCTIONS
+-- [04] CLUBS (NEW)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.clubs (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text NOT NULL,
+  country text DEFAULT 'PT',
+  city text,
+  address text,
+  type text CHECK (type IN ('INDOOR', 'OUTDOOR', 'COVERED', 'MIXED')),
+  court_count integer DEFAULT 0,
+  
+  -- Facilities
+  has_parking boolean DEFAULT false,
+  has_showers boolean DEFAULT false,
+  has_bar boolean DEFAULT false,
+  has_shop boolean DEFAULT false,
+  
+  -- Contacts
+  phone text,
+  email text,
+  website text,
+  image_url text,
+  
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.clubs ENABLE ROW LEVEL SECURITY;
+
+-- Everyone can view clubs
+DROP POLICY IF EXISTS "Clubs are viewable by everyone" ON public.clubs;
+CREATE POLICY "Clubs are viewable by everyone" ON public.clubs FOR SELECT USING ( true );
+
+-- Only admins/service role can insert/update (Users cannot edit clubs)
+-- For now, we restrict this via RLS to effectively read-only for authenticated users, 
+-- assuming admin operations happen directly in Supabase Dashboard or via a specific admin role logic not implemented yet.
+DROP POLICY IF EXISTS "No user edits on clubs" ON public.clubs;
+
+
+-- ============================================================================
+-- [05] TRIGGERS & FUNCTIONS
 -- ============================================================================
 
 -- Função updated_at
