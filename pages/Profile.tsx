@@ -28,22 +28,27 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     racketBrand: user.racketBrand || '',
     // New Fields
     country: user.country || 'PT',
-    state: user.state || '', // Using 'state' for Region/District
+    state: user.state || '', // Using 'state' for Region/District CODE
     city: user.city || '',   // Free text for specific city
     homeClub: user.homeClub || '',
     division: user.division || 'M3'
   });
 
+  // Get regions based on selected country
+  const currentRegions = PADEL_REGIONS[formData.country] || [];
+
   // Effect to reset region if it doesn't match the new country's list (when editing)
   useEffect(() => {
     if (isEditing) {
-      const availableRegions = PADEL_REGIONS[formData.country] || [];
-      // If current state is not in the new country list, reset it (unless it's empty)
-      if (formData.state && !availableRegions.includes(formData.state) && availableRegions.length > 0) {
+      // Check if current state (code) exists in the new country's region list
+      const regionExists = currentRegions.some(r => r.code === formData.state);
+      
+      // If we have regions for this country but the current selection isn't valid, clear it
+      if (currentRegions.length > 0 && !regionExists) {
         setFormData(prev => ({ ...prev, state: '' }));
       }
     }
-  }, [formData.country, isEditing]);
+  }, [formData.country, isEditing, currentRegions]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -79,16 +84,10 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       setIsEditing(false);
       if (onUpdate) onUpdate();
     } else {
-      // Intelligent Error Handling
       let tip = "Ensure you have run the SQL script in Supabase to create the table and columns.";
+      if (result.error?.includes('updated_at')) tip = "MISSING COLUMN 'updated_at'. Run the SQL script again.";
       
-      if (result.error?.includes('updated_at')) {
-        tip = "MISSING COLUMN 'updated_at'.\n\nRun the Master Schema SQL script again.";
-      } else if (result.error?.includes('home_club') || result.error?.includes('country')) {
-         tip = "MISSING NEW COLUMNS.\n\nRun the updated SQL script in Supabase to add 'country', 'city', etc.";
-      }
-
-      alert(`Error saving profile: ${result.error}\n\n----------------\n${tip}`);
+      alert(`Error saving profile: ${result.error}\n\n${tip}`);
     }
     setIsSaving(false);
   };
@@ -105,8 +104,21 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     return age;
   };
 
-  // Get regions based on selected country
-  const currentRegions = PADEL_REGIONS[formData.country] || [];
+  // Helper to get display name for country code
+  const getCountryName = (code: string) => {
+    const country = PADEL_COUNTRIES.find(c => c.code === code);
+    return country ? `${country.flag} ${country.name}` : code;
+  };
+
+  // Helper to get display name for region code
+  const getRegionName = (countryCode: string, regionCode: string) => {
+    const regs = PADEL_REGIONS[countryCode];
+    if (regs) {
+      const reg = regs.find(r => r.code === regionCode);
+      if (reg) return reg.name;
+    }
+    return regionCode; // Fallback to code if not found
+  };
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -127,11 +139,11 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                {formData.nickname ? `"${formData.nickname}"` : user.name}
              </h1>
              <p className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
-               {/* Display Flag */}
+               {/* Display Flag + Region Name */}
                <span className="text-xl">
                  {PADEL_COUNTRIES.find(c => c.code === formData.country)?.flag || '🌍'}
                </span>
-               {user.role} • {formData.state || formData.country}
+               {user.role} • {formData.state ? getRegionName(formData.country, formData.state) : formData.country}
              </p>
              <div className="flex gap-2 mt-3 justify-center md:justify-start">
                 <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase">
@@ -354,7 +366,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       >
                          <option value="">Select Region...</option>
                          {currentRegions.map(region => (
-                           <option key={region} value={region}>{region}</option>
+                           <option key={region.code} value={region.code}>{region.name}</option>
                          ))}
                       </select>
                       {currentRegions.length === 0 && (

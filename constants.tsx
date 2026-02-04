@@ -1,10 +1,10 @@
 
 import { EventType, UserRole, UserProfile, RankingEntry, TrainingExercise, PadelEvent, JoinRequest } from './types';
 
-// --- GEOGRAPHICAL DATA ---
+// --- GEOGRAPHICAL DATA (ISO 3166 STANDARDS) ---
 
 export const PADEL_COUNTRIES = [
-  // --- TOP PADEL NATIONS (Priority) ---
+  // --- PRIORITY PADEL NATIONS ---
   { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
   { code: 'ES', name: 'Spain', flag: '🇪🇸' },
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
@@ -13,20 +13,22 @@ export const PADEL_COUNTRIES = [
   { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
   { code: 'FR', name: 'France', flag: '🇫🇷' },
   { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
+  { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
+  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
   
   // --- SEPARATOR ---
   { code: 'sep', name: '──────────────', flag: '' },
 
-  // --- REST OF THE WORLD (Alphabetical) ---
+  // --- ALL COUNTRIES (A-Z) ---
   { code: 'AF', name: 'Afghanistan', flag: '🇦🇫' },
   { code: 'AL', name: 'Albania', flag: '🇦🇱' },
   { code: 'DZ', name: 'Algeria', flag: '🇩🇿' },
   { code: 'AD', name: 'Andorra', flag: '🇦🇩' },
   { code: 'AO', name: 'Angola', flag: '🇦🇴' },
-  { code: 'AI', name: 'Anguilla', flag: '🇦🇮' },
   { code: 'AG', name: 'Antigua & Barbuda', flag: '🇦🇬' },
+  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
   { code: 'AM', name: 'Armenia', flag: '🇦🇲' },
-  { code: 'AW', name: 'Aruba', flag: '🇦🇼' },
   { code: 'AU', name: 'Australia', flag: '🇦🇺' },
   { code: 'AT', name: 'Austria', flag: '🇦🇹' },
   { code: 'AZ', name: 'Azerbaijan', flag: '🇦🇿' },
@@ -38,12 +40,11 @@ export const PADEL_COUNTRIES = [
   { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
   { code: 'BZ', name: 'Belize', flag: '🇧🇿' },
   { code: 'BJ', name: 'Benin', flag: '🇧🇯' },
-  { code: 'BM', name: 'Bermuda', flag: '🇧🇲' },
   { code: 'BT', name: 'Bhutan', flag: '🇧🇹' },
   { code: 'BO', name: 'Bolivia', flag: '🇧🇴' },
   { code: 'BA', name: 'Bosnia & Herzegovina', flag: '🇧🇦' },
   { code: 'BW', name: 'Botswana', flag: '🇧🇼' },
-  { code: 'BN', name: 'Brunei', flag: '🇧🇳' },
+  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
   { code: 'BG', name: 'Bulgaria', flag: '🇧🇬' },
   { code: 'BF', name: 'Burkina Faso', flag: '🇧🇫' },
   { code: 'BI', name: 'Burundi', flag: '🇧🇮' },
@@ -51,7 +52,6 @@ export const PADEL_COUNTRIES = [
   { code: 'CM', name: 'Cameroon', flag: '🇨🇲' },
   { code: 'CA', name: 'Canada', flag: '🇨🇦' },
   { code: 'CV', name: 'Cape Verde', flag: '🇨🇻' },
-  { code: 'KY', name: 'Cayman Islands', flag: '🇰🇾' },
   { code: 'CF', name: 'Central African Rep.', flag: '🇨🇫' },
   { code: 'TD', name: 'Chad', flag: '🇹🇩' },
   { code: 'CL', name: 'Chile', flag: '🇨🇱' },
@@ -72,10 +72,12 @@ export const PADEL_COUNTRIES = [
   { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
   { code: 'SV', name: 'El Salvador', flag: '🇸🇻' },
   { code: 'GQ', name: 'Equatorial Guinea', flag: '🇬🇶' },
+  { code: 'ER', name: 'Eritrea', flag: '🇪🇷' },
   { code: 'EE', name: 'Estonia', flag: '🇪🇪' },
   { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
   { code: 'FJ', name: 'Fiji', flag: '🇫🇯' },
   { code: 'FI', name: 'Finland', flag: '🇫🇮' },
+  { code: 'FR', name: 'France', flag: '🇫🇷' },
   { code: 'GA', name: 'Gabon', flag: '🇬🇦' },
   { code: 'GM', name: 'Gambia', flag: '🇬🇲' },
   { code: 'GE', name: 'Georgia', flag: '🇬🇪' },
@@ -89,7 +91,6 @@ export const PADEL_COUNTRIES = [
   { code: 'GY', name: 'Guyana', flag: '🇬🇾' },
   { code: 'HT', name: 'Haiti', flag: '🇭🇹' },
   { code: 'HN', name: 'Honduras', flag: '🇭🇳' },
-  { code: 'HK', name: 'Hong Kong', flag: '🇭🇰' },
   { code: 'HU', name: 'Hungary', flag: '🇭🇺' },
   { code: 'IS', name: 'Iceland', flag: '🇮🇸' },
   { code: 'IN', name: 'India', flag: '🇮🇳' },
@@ -98,7 +99,7 @@ export const PADEL_COUNTRIES = [
   { code: 'IQ', name: 'Iraq', flag: '🇮🇶' },
   { code: 'IE', name: 'Ireland', flag: '🇮🇪' },
   { code: 'IL', name: 'Israel', flag: '🇮🇱' },
-  { code: 'CI', name: 'Ivory Coast', flag: '🇨🇮' },
+  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
   { code: 'JM', name: 'Jamaica', flag: '🇯🇲' },
   { code: 'JP', name: 'Japan', flag: '🇯🇵' },
   { code: 'JO', name: 'Jordan', flag: '🇯🇴' },
@@ -115,16 +116,13 @@ export const PADEL_COUNTRIES = [
   { code: 'LI', name: 'Liechtenstein', flag: '🇱🇮' },
   { code: 'LT', name: 'Lithuania', flag: '🇱🇹' },
   { code: 'LU', name: 'Luxembourg', flag: '🇱🇺' },
-  { code: 'MO', name: 'Macau', flag: '🇲🇴' },
-  { code: 'MK', name: 'Macedonia', flag: '🇲🇰' },
+  { code: 'MK', name: 'North Macedonia', flag: '🇲🇰' },
   { code: 'MG', name: 'Madagascar', flag: '🇲🇬' },
   { code: 'MW', name: 'Malawi', flag: '🇲🇼' },
   { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
   { code: 'MV', name: 'Maldives', flag: '🇲🇻' },
   { code: 'ML', name: 'Mali', flag: '🇲🇱' },
   { code: 'MT', name: 'Malta', flag: '🇲🇹' },
-  { code: 'MR', name: 'Mauritania', flag: '🇲🇷' },
-  { code: 'MU', name: 'Mauritius', flag: '🇲🇺' },
   { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
   { code: 'MD', name: 'Moldova', flag: '🇲🇩' },
   { code: 'MC', name: 'Monaco', flag: '🇲🇨' },
@@ -149,6 +147,7 @@ export const PADEL_COUNTRIES = [
   { code: 'PE', name: 'Peru', flag: '🇵🇪' },
   { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
   { code: 'PL', name: 'Poland', flag: '🇵🇱' },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
   { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
   { code: 'RO', name: 'Romania', flag: '🇷🇴' },
   { code: 'RU', name: 'Russia', flag: '🇷🇺' },
@@ -166,10 +165,11 @@ export const PADEL_COUNTRIES = [
   { code: 'SO', name: 'Somalia', flag: '🇸🇴' },
   { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
   { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
   { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
   { code: 'SD', name: 'Sudan', flag: '🇸🇩' },
   { code: 'SR', name: 'Suriname', flag: '🇸🇷' },
-  { code: 'SZ', name: 'Swaziland', flag: '🇸🇿' },
+  { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
   { code: 'CH', name: 'Switzerland', flag: '🇨🇭' },
   { code: 'SY', name: 'Syria', flag: '🇸🇾' },
   { code: 'TW', name: 'Taiwan', flag: '🇹🇼' },
@@ -187,6 +187,7 @@ export const PADEL_COUNTRIES = [
   { code: 'UA', name: 'Ukraine', flag: '🇺🇦' },
   { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
   { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'US', name: 'United States', flag: '🇺🇸' },
   { code: 'UY', name: 'Uruguay', flag: '🇺🇾' },
   { code: 'UZ', name: 'Uzbekistan', flag: '🇺🇿' },
   { code: 'VE', name: 'Venezuela', flag: '🇻🇪' },
@@ -196,40 +197,77 @@ export const PADEL_COUNTRIES = [
   { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼' }
 ];
 
-export const PADEL_REGIONS: Record<string, string[]> = {
+// Map Country Code (ISO 3166-1) -> List of Region Objects {code: ISO 3166-2, name: Display Name}
+export const PADEL_REGIONS: Record<string, { code: string; name: string }[]> = {
   'PT': [
-    'Lisboa', 'Porto', 'Setúbal', 'Braga', 'Aveiro', 'Faro (Algarve)', 'Leiria', 
-    'Coimbra', 'Santarém', 'Viseu', 'Madeira', 'Açores', 'Viana do Castelo', 'Évora', 
-    'Vila Real', 'Castelo Branco', 'Guarda', 'Beja', 'Portalegre', 'Bragança'
+    { code: 'PT-11', name: 'Lisboa' },
+    { code: 'PT-13', name: 'Porto' },
+    { code: 'PT-15', name: 'Setúbal' },
+    { code: 'PT-03', name: 'Braga' },
+    { code: 'PT-01', name: 'Aveiro' },
+    { code: 'PT-08', name: 'Faro (Algarve)' },
+    { code: 'PT-10', name: 'Leiria' },
+    { code: 'PT-06', name: 'Coimbra' },
+    { code: 'PT-14', name: 'Santarém' },
+    { code: 'PT-18', name: 'Viseu' },
+    { code: 'PT-30', name: 'Madeira' },
+    { code: 'PT-20', name: 'Açores' },
+    { code: 'PT-16', name: 'Viana do Castelo' },
+    { code: 'PT-07', name: 'Évora' },
+    { code: 'PT-17', name: 'Vila Real' },
+    { code: 'PT-05', name: 'Castelo Branco' },
+    { code: 'PT-09', name: 'Guarda' },
+    { code: 'PT-02', name: 'Beja' },
+    { code: 'PT-12', name: 'Portalegre' },
+    { code: 'PT-04', name: 'Bragança' }
   ],
   'ES': [
-    'Madrid', 'Cataluña (Barcelona)', 'Andalucía (Málaga/Sevilla)', 'Comunidad Valenciana', 
-    'Islas Baleares', 'País Vasco', 'Galicia', 'Castilla y León', 'Canarias', 'Murcia',
-    'Aragón', 'Castilla-La Mancha', 'Extremadura', 'Asturias', 'Navarra', 'Cantabria', 'La Rioja'
-  ],
-  'AR': [
-    'Buenos Aires', 'Córdoba', 'Santa Fe', 'Mendoza', 'Tucumán', 'Entre Ríos', 'Salta', 'Misiones', 'Chaco', 'Corrientes'
+    { code: 'ES-MD', name: 'Madrid' },
+    { code: 'ES-CT', name: 'Cataluña (Barcelona)' },
+    { code: 'ES-AN', name: 'Andalucía (Málaga/Sevilla)' },
+    { code: 'ES-VC', name: 'Comunidad Valenciana' },
+    { code: 'ES-IB', name: 'Islas Baleares' },
+    { code: 'ES-PV', name: 'País Vasco' },
+    { code: 'ES-GA', name: 'Galicia' },
+    { code: 'ES-CL', name: 'Castilla y León' },
+    { code: 'ES-CN', name: 'Canarias' },
+    { code: 'ES-MC', name: 'Murcia' },
+    { code: 'ES-AR', name: 'Aragón' },
+    { code: 'ES-CM', name: 'Castilla-La Mancha' },
+    { code: 'ES-EX', name: 'Extremadura' },
+    { code: 'ES-AS', name: 'Asturias' },
+    { code: 'ES-NC', name: 'Navarra' },
+    { code: 'ES-CB', name: 'Cantabria' },
+    { code: 'ES-RI', name: 'La Rioja' }
   ],
   'BR': [
-    'São Paulo', 'Rio de Janeiro', 'Santa Catarina', 'Rio Grande do Sul', 'Paraná', 'Minas Gerais', 'Bahia', 'Brasília', 'Ceará', 'Pernambuco'
+    { code: 'BR-SP', name: 'São Paulo' },
+    { code: 'BR-RJ', name: 'Rio de Janeiro' },
+    { code: 'BR-SC', name: 'Santa Catarina' },
+    { code: 'BR-RS', name: 'Rio Grande do Sul' },
+    { code: 'BR-PR', name: 'Paraná' },
+    { code: 'BR-MG', name: 'Minas Gerais' },
+    { code: 'BR-BA', name: 'Bahia' },
+    { code: 'BR-DF', name: 'Brasília' },
+    { code: 'BR-CE', name: 'Ceará' },
+    { code: 'BR-PE', name: 'Pernambuco' }
   ],
   'IT': [
-    'Lombardia (Milano)', 'Lazio (Roma)', 'Sicilia', 'Veneto', 'Emilia-Romagna', 'Piemonte', 'Campania', 'Toscana', 'Puglia'
+    { code: 'IT-25', name: 'Lombardia (Milano)' },
+    { code: 'IT-62', name: 'Lazio (Roma)' },
+    { code: 'IT-82', name: 'Sicilia' },
+    { code: 'IT-34', name: 'Veneto' },
+    { code: 'IT-45', name: 'Emilia-Romagna' },
+    { code: 'IT-21', name: 'Piemonte' },
+    { code: 'IT-72', name: 'Campania' },
+    { code: 'IT-52', name: 'Toscana' },
+    { code: 'IT-75', name: 'Puglia' }
   ],
   'SE': [
-    'Stockholm', 'Västra Götaland (Gothenburg)', 'Skåne (Malmö)', 'Uppsala', 'Östergötland'
-  ],
-  'FR': [
-    'Île-de-France (Paris)', 'Occitanie', 'Provence-Alpes-Côte d\'Azur', 'Auvergne-Rhône-Alpes', 'Nouvelle-Aquitaine', 'Hauts-de-France'
-  ],
-  'US': [
-    'Florida (Miami)', 'California', 'Texas', 'New York', 'Other'
-  ],
-  'GB': [
-    'London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Liverpool', 'Bristol'
-  ],
-  'DE': [
-    'Berlin', 'Munich', 'Hamburg', 'Cologne', 'Frankfurt', 'Stuttgart', 'Düsseldorf'
+    { code: 'SE-AB', name: 'Stockholm' },
+    { code: 'SE-O',  name: 'Västra Götaland (Gothenburg)' },
+    { code: 'SE-M',  name: 'Skåne (Malmö)' },
+    { code: 'SE-C',  name: 'Uppsala' }
   ]
 };
 
