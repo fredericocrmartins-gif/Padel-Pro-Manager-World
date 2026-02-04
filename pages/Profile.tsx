@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender } from '../types';
 import { signOut, updateUserProfile } from '../lib/supabase';
 import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES } from '../constants';
@@ -40,24 +40,23 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   const currentRegions = PADEL_REGIONS[formData.country] || [];
   const currentCities = formData.state ? PADEL_CITIES[formData.state] || [] : [];
 
-  // Effect: Reset dependent fields when parent changes
-  useEffect(() => {
-    if (isEditing) {
-      // 1. Check Region Validity
-      const regionExists = currentRegions.some(r => r.code === formData.state);
-      if (currentRegions.length > 0 && !regionExists) {
-        setFormData(prev => ({ ...prev, state: '', city: '' })); // Reset both
-        return;
-      }
+  // Handlers for Location Cascading Updates
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      country: e.target.value,
+      state: '', // Reset region
+      city: ''   // Reset city
+    }));
+  };
 
-      // 2. Check City Validity (Only if we have a list of cities)
-      if (currentCities.length > 0) {
-        if (!currentCities.includes(formData.city)) {
-          setFormData(prev => ({ ...prev, city: '' }));
-        }
-      }
-    }
-  }, [formData.country, formData.state, isEditing, currentRegions, currentCities]);
+  const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      state: e.target.value,
+      city: '' // Reset city when region changes
+    }));
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -351,7 +350,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                     <select
                        disabled={!isEditing}
                        value={formData.country}
-                       onChange={(e) => setFormData({...formData, country: e.target.value})}
+                       onChange={handleCountryChange}
                        className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
                     >
                        {PADEL_COUNTRIES.map(c => (
@@ -367,7 +366,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       <select
                         disabled={!isEditing || currentRegions.length === 0}
                         value={formData.state}
-                        onChange={(e) => setFormData({...formData, state: e.target.value})}
+                        onChange={handleRegionChange}
                         className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
                       >
                          <option value="">Select Region...</option>
