@@ -271,6 +271,41 @@ export const PADEL_REGIONS: Record<string, { code: string; name: string }[]> = {
   ]
 };
 
+// Map Region Code (ISO 3166-2) -> List of Standardized Municipalities/Cities
+export const PADEL_CITIES: Record<string, string[]> = {
+  // PORTUGAL - Lisboa (PT-11)
+  'PT-11': [
+    'Lisboa', 'Cascais', 'Sintra', 'Oeiras', 'Amadora', 'Loures', 
+    'Odivelas', 'Vila Franca de Xira', 'Mafra', 'Torres Vedras', 'Azambuja', 'Alenquer'
+  ],
+  // PORTUGAL - Porto (PT-13)
+  'PT-13': [
+    'Porto', 'Vila Nova de Gaia', 'Matosinhos', 'Maia', 'Gondomar', 
+    'Valongo', 'Póvoa de Varzim', 'Vila do Conde', 'Santo Tirso', 'Trofa'
+  ],
+  // PORTUGAL - Setúbal (PT-15)
+  'PT-15': [
+    'Setúbal', 'Almada', 'Seixal', 'Barreiro', 'Montijo', 
+    'Palmela', 'Sesimbra', 'Moita', 'Alcochete', 'Grândola', 'Sines'
+  ],
+  // PORTUGAL - Faro (PT-08)
+  'PT-08': [
+    'Faro', 'Loulé', 'Portimão', 'Olhão', 'Silves', 'Albufeira', 
+    'Lagos', 'Tavira', 'Vila Real de Santo António', 'Lagoa'
+  ],
+  
+  // SPAIN - Madrid (ES-MD)
+  'ES-MD': [
+    'Madrid', 'Alcobendas', 'Pozuelo de Alarcón', 'Las Rozas', 'Majadahonda', 
+    'Móstoles', 'Fuenlabrada', 'Leganés', 'Getafe', 'Alcorcón', 'Torrejón de Ardoz'
+  ],
+  // SPAIN - Barcelona (ES-CT)
+  'ES-CT': [
+    'Barcelona', 'L\'Hospitalet de Llobregat', 'Badalona', 'Terrassa', 'Sabadell', 
+    'Mataró', 'Santa Coloma de Gramenet', 'Sant Cugat del Vallès', 'Cornellà de Llobregat'
+  ]
+};
+
 // --- EXISTING MOCK DATA ---
 
 export const MOCK_USER: UserProfile = {

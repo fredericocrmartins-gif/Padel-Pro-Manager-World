@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender } from '../types';
 import { signOut, updateUserProfile } from '../lib/supabase';
-import { PADEL_COUNTRIES, PADEL_REGIONS } from '../constants';
+import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES } from '../constants';
 
 interface ProfileProps {
   user: UserProfile;
@@ -26,29 +26,38 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     hand: user.hand || 'RIGHT',
     courtPosition: user.courtPosition || 'BOTH',
     racketBrand: user.racketBrand || '',
-    // New Fields
+    // Location Fields
     country: user.country || 'PT',
-    state: user.state || '', // Using 'state' for Region/District CODE
-    city: user.city || '',   // Free text for specific city
+    state: user.state || '', // Region/District Code
+    city: user.city || '',   // Standardized Municipality
+    location: user.location || '', // Optional Specific Location (e.g. Neighbourhood)
+    
     homeClub: user.homeClub || '',
     division: user.division || 'M3'
   });
 
-  // Get regions based on selected country
+  // Derived Lists
   const currentRegions = PADEL_REGIONS[formData.country] || [];
+  const currentCities = formData.state ? PADEL_CITIES[formData.state] || [] : [];
 
-  // Effect to reset region if it doesn't match the new country's list (when editing)
+  // Effect: Reset dependent fields when parent changes
   useEffect(() => {
     if (isEditing) {
-      // Check if current state (code) exists in the new country's region list
+      // 1. Check Region Validity
       const regionExists = currentRegions.some(r => r.code === formData.state);
-      
-      // If we have regions for this country but the current selection isn't valid, clear it
       if (currentRegions.length > 0 && !regionExists) {
-        setFormData(prev => ({ ...prev, state: '' }));
+        setFormData(prev => ({ ...prev, state: '', city: '' })); // Reset both
+        return;
+      }
+
+      // 2. Check City Validity (Only if we have a list of cities)
+      if (currentCities.length > 0) {
+        if (!currentCities.includes(formData.city)) {
+          setFormData(prev => ({ ...prev, city: '' }));
+        }
       }
     }
-  }, [formData.country, isEditing, currentRegions]);
+  }, [formData.country, formData.state, isEditing, currentRegions, currentCities]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -73,9 +82,12 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       courtPosition: formData.courtPosition as CourtPosition,
       phone: formData.phone,
       racketBrand: formData.racketBrand,
+      
       country: formData.country,
       state: formData.state,
       city: formData.city,
+      location: formData.location, // Save specific location here
+      
       homeClub: formData.homeClub,
       division: formData.division
     });
@@ -104,20 +116,14 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     return age;
   };
 
-  // Helper to get display name for country code
-  const getCountryName = (code: string) => {
-    const country = PADEL_COUNTRIES.find(c => c.code === code);
-    return country ? `${country.flag} ${country.name}` : code;
-  };
-
-  // Helper to get display name for region code
+  // Helper: Get display name for region code
   const getRegionName = (countryCode: string, regionCode: string) => {
     const regs = PADEL_REGIONS[countryCode];
     if (regs) {
       const reg = regs.find(r => r.code === regionCode);
       if (reg) return reg.name;
     }
-    return regionCode; // Fallback to code if not found
+    return regionCode;
   };
 
   return (
@@ -370,19 +376,47 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                          ))}
                       </select>
                       {currentRegions.length === 0 && (
-                        <p className="text-[9px] text-text-muted mt-1 ml-2">No regions available for this country.</p>
+                        <p className="text-[9px] text-text-muted mt-1 ml-2">No regions available.</p>
                       )}
                     </div>
                  </div>
 
-                 {/* CITY INPUT (FREE TEXT) */}
+                 {/* CITY SELECT (DEPENDENT) OR INPUT */}
                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">City (Specific)</label>
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">City / Municipality</label>
+                    {currentCities.length > 0 ? (
+                       <div className="relative">
+                        <select
+                           disabled={!isEditing}
+                           value={formData.city}
+                           onChange={(e) => setFormData({...formData, city: e.target.value})}
+                           className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
+                        >
+                           <option value="">Select Municipality...</option>
+                           {currentCities.map(city => (
+                              <option key={city} value={city}>{city}</option>
+                           ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <input 
+                        disabled={!isEditing}
+                        value={formData.city}
+                        onChange={(e) => setFormData({...formData, city: e.target.value})}
+                        placeholder="e.g. Cascais, Sintra..."
+                        className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
+                      />
+                    )}
+                 </div>
+
+                 {/* SPECIFIC LOCATION (OPTIONAL) */}
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Neighbourhood (Optional)</label>
                     <input 
                       disabled={!isEditing}
-                      value={formData.city}
-                      onChange={(e) => setFormData({...formData, city: e.target.value})}
-                      placeholder="e.g. Cascais, Sintra..."
+                      value={formData.location}
+                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                      placeholder="e.g. Quinta da Marinha, Expo..."
                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent"
                     />
                  </div>
