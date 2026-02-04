@@ -180,21 +180,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               Edit Profile
             </button>
           ) : (
-            <>
-              <button 
-                onClick={() => setIsEditing(false)}
-                className="px-6 py-3 bg-transparent text-text-muted font-bold rounded-2xl hover:text-white transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSave}
-                disabled={isSaving}
-                className="px-6 py-3 bg-primary text-background-dark font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all flex items-center gap-2"
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </>
+            /* Empty div or null when editing to remove buttons from top */
+            null
           )}
           <button 
              onClick={handleSignOut}
@@ -272,9 +259,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
         {/* Right Column: Edit Form */}
         <div className="lg:col-span-2 space-y-8">
            
-           {/* Identity Section */}
+           {/* SECTION 1: IDENTITY */}
            <section className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
-              <h3 className="text-lg font-black mb-6 text-text-muted uppercase tracking-widest text-[10px]">Identity & Contact</h3>
+              <h3 className="text-lg font-black mb-6 text-text-muted uppercase tracking-widest text-[10px]">Identity</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-2">
@@ -315,7 +302,40 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent text-white" 
                     />
                  </div>
-                 
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Gender</label>
+                    <select
+                       disabled={!isEditing}
+                       value={formData.gender}
+                       onChange={(e) => setFormData({...formData, gender: e.target.value as Gender})}
+                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
+                    >
+                       <option value="MALE">Male</option>
+                       <option value="FEMALE">Female</option>
+                       <option value="OTHER">Other</option>
+                    </select>
+                 </div>
+              </div>
+           </section>
+
+           {/* SECTION 2: CONTACT INFORMATION */}
+           <section className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
+              <h3 className="text-lg font-black mb-6 text-text-muted uppercase tracking-widest text-[10px]">Contact Details</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {/* Email Field - Read Only */}
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2 flex items-center gap-2">
+                      Email Address 
+                      <span className="bg-background-dark px-1.5 py-0.5 rounded text-[8px] text-text-muted border border-border-dark">LOGIN ID</span>
+                    </label>
+                    <input 
+                      disabled
+                      value={formData.email}
+                      className="w-full bg-background-dark/50 border border-transparent rounded-xl p-3 text-sm font-bold text-text-muted opacity-70 cursor-not-allowed"
+                    />
+                 </div>
+
                  {/* Phone Input with Country Code Prefix */}
                  <div className="space-y-2">
                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Phone (Optional)</label>
@@ -333,24 +353,10 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       />
                     </div>
                  </div>
-
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Gender</label>
-                    <select
-                       disabled={!isEditing}
-                       value={formData.gender}
-                       onChange={(e) => setFormData({...formData, gender: e.target.value as Gender})}
-                       className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none disabled:opacity-50 disabled:border-transparent appearance-none"
-                    >
-                       <option value="MALE">Male</option>
-                       <option value="FEMALE">Female</option>
-                       <option value="OTHER">Other</option>
-                    </select>
-                 </div>
               </div>
            </section>
 
-           {/* Competition & Location (STANDARDIZED SECTION) */}
+           {/* SECTION 3: LOCATION & COMPETITION */}
            <section className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
               <h3 className="text-lg font-black mb-6 text-text-muted uppercase tracking-widest text-[10px]">Location & Rankings</h3>
               
@@ -474,7 +480,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               </div>
            </section>
 
-           {/* Player Config Section */}
+           {/* SECTION 4: PLAYER CONFIGURATION */}
            <section className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
               <h3 className="text-lg font-black mb-6 text-text-muted uppercase tracking-widest text-[10px]">Player Configuration</h3>
               
@@ -541,7 +547,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               </div>
            </section>
 
-           {/* Footer Save Action Bar (Duplicated for convenience) */}
+           {/* Footer Save Action Bar */}
            {isEditing && (
              <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-6 flex justify-end gap-3 sticky bottom-6 shadow-2xl z-20">
                 <button 
