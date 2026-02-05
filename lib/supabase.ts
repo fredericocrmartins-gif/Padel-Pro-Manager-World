@@ -105,10 +105,19 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
     const { data: sessionData } = await supabase.auth.getSession();
     let user = sessionData?.session?.user;
 
-    // If no local session, try server verification as last resort
+    // If no local session, try server verification as last resort with timeout
     if (!user) {
-       const { data: authData } = await supabase.auth.getUser();
-       user = authData?.user;
+       // Wrap getUser in timeout to prevent infinite hanging
+       const getUserPromise = supabase.auth.getUser();
+       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Auth check timeout')), 4000));
+       
+       try {
+         const { data: authData } = await Promise.race([getUserPromise, timeoutPromise]) as any;
+         user = authData?.user;
+       } catch (err) {
+         // If timeout or network error, we assume no user or offline
+         return null;
+       }
     }
 
     // If still no user, we are truly logged out
@@ -123,8 +132,8 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
     try {
         const fetchProfile = supabase.from('profiles').select('*').eq('id', user.id).single();
         
-        // 5-second timeout for DB fetch only
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 5000));
+        // 4-second timeout for DB fetch only
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 4000));
         
         const result = await Promise.race([fetchProfile, timeoutPromise]) as any;
         profileData = result.data;

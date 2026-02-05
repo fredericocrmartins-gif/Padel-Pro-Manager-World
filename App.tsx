@@ -30,6 +30,15 @@ const App: React.FC = () => {
       setShowWelcome(true);
     }
 
+    // SAFETY FAILSAFE:
+    // If auth checks hang for more than 5 seconds (e.g. slow network), force stop loading.
+    const safetyTimer = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn("⚠️ PadelPro: Auth check timed out. Forcing app load.");
+        setIsLoading(false);
+      }
+    }, 5000);
+
     const checkUser = async () => {
       try {
         // 1. FAST CHECK: Do we have a local session?
@@ -52,6 +61,9 @@ const App: React.FC = () => {
       } catch (error) {
         console.error("Failed to check user session:", error);
         if (mounted) setIsLoading(false);
+      } finally {
+        // If the check finished (success or error), clear the safety timer
+        clearTimeout(safetyTimer);
       }
     };
 
@@ -78,10 +90,12 @@ const App: React.FC = () => {
       return () => {
         mounted = false;
         subscription.unsubscribe();
+        clearTimeout(safetyTimer);
       };
     } else {
       // Demo Mode
       setIsLoading(false);
+      clearTimeout(safetyTimer);
     }
   }, []); // Remove dependencies to run only once on mount
 
