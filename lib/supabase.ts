@@ -81,10 +81,9 @@ export const resendConfirmationEmail = async (email: string) => {
 
 // --- CRITICAL PROFILE FETCHING LOGIC ---
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
-    // 1. If Mock Mode, return mock user
     if (!supabase) return MOCK_USER; 
     
-    // 2. Check Session
+    // 1. Check Session
     let session = null;
     try {
         const { data, error } = await supabase.auth.getSession();
@@ -95,8 +94,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
         return null;
     }
 
-    // 3. Construct Fallback Profile immediately from session data
-    // This ensures we ALWAYS have an object to return if the DB fails
+    // 2. Construct Fallback Profile immediately (Pre-computation)
     const user = session.user;
     const email = user.email || '';
     const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || 'Player';
@@ -121,23 +119,27 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
         privacySettings: { email: 'PRIVATE', phone: 'PARTNERS', stats: 'PUBLIC', matchHistory: 'PUBLIC', activityLog: 'PRIVATE' }
     };
 
-    // 4. Try to get Real Profile from DB
+    // 3. Try to get Real Profile from DB (With strict timeout)
     try {
-        const dbProfile = await getUserProfileById(user.id);
+        // Use a shorter timeout (1500ms) to ensure we fallback quickly if network is slow
+        const dbProfile = await promiseWithTimeout(
+            getUserProfileById(user.id),
+            1500,
+            'UserProfileFetch'
+        );
+        
         if (dbProfile) {
             return dbProfile;
         }
     } catch (e) {
-        console.warn("DB Profile fetch failed, using emergency profile", e);
+        console.warn("DB Profile fetch failed/timed out, using emergency profile:", e);
     }
 
-    // 5. If DB failed or returned null, Trigger Self-Healing and Return Emergency Profile
-    console.warn("⚠️ Using Emergency Profile Fallback for user:", email);
-    
+    // 4. Fallback Triggered
     // Async self-healing: try to create the profile row for next time
     updateUserProfile(user.id, { name: emergencyProfile.name, email: emergencyProfile.email })
         .then(res => {
-             if (res.success) console.log("✅ Profile auto-created/repaired in background.");
+             if (res.success) console.log("✅ Profile repaired in background.");
         });
 
     return emergencyProfile;

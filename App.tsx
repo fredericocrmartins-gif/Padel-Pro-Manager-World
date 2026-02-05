@@ -20,27 +20,32 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRescueBtn, setShowRescueBtn] = useState(false); // New Rescue State
   const [showWelcome, setShowWelcome] = useState(false);
   const [viewingProfileId, setViewingProfileId] = useState<string | null>(null);
   const isMounted = useRef(true);
 
-  // 1. ABSOLUTE SAFETY TIMER (The "Big Hammer")
-  // Forces the app to stop loading after 3 seconds no matter what, preventing white screen of death.
+  // 1. SAFETY TIMERS (The "Big Hammer")
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Show "Force Enter" button after 3 seconds if still loading
+    const rescueTimer = setTimeout(() => {
+        if (isMounted.current) setShowRescueBtn(true);
+    }, 3000);
+
+    // Force stop loading after 6 seconds no matter what
+    const safetyTimer = setTimeout(() => {
       if (isMounted.current) {
         setIsLoading((prev) => {
-          if (prev) {
-             console.warn("⚠️ PadelPro: Forced app load via safety timer");
-             // If we timed out and have no user, but supabase is configured, something is wrong.
-             // We will let the Login screen show.
-          }
+          if (prev) console.warn("⚠️ PadelPro: Forced app load via safety timer");
           return false;
         });
       }
-    }, 3000);
+    }, 6000);
 
-    return () => { clearTimeout(timer); };
+    return () => { 
+        clearTimeout(rescueTimer); 
+        clearTimeout(safetyTimer); 
+    };
   }, []);
 
   // 2. Auth & Data Fetching
@@ -67,8 +72,6 @@ const App: React.FC = () => {
             if (isMounted.current) {
                if (profile) {
                  setUser(profile);
-               } else {
-                 console.error("CRITICAL: Session exists but profile is null. This should never happen with the new fallback.");
                }
                setIsLoading(false);
             }
@@ -93,10 +96,10 @@ const App: React.FC = () => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
              // Only fetch if we don't have a user or if the session user is different
              if (session && (!user || user.id !== session.user.id)) {
-                setIsLoading(true); // Briefly show loading while we fetch profile
+                // IMPORTANT: Do NOT set isLoading(true) here. 
+                // We want background updates without blocking the UI.
                 const profile = await getCurrentUserProfile();
                 if (isMounted.current && profile) setUser(profile);
-                if (isMounted.current) setIsLoading(false);
              }
         } else if (event === 'SIGNED_OUT') {
           if (isMounted.current) {
@@ -140,12 +143,30 @@ const App: React.FC = () => {
     }
   };
 
+  const handleForceEnter = () => {
+      console.warn("User triggered Force Enter");
+      setIsLoading(false);
+  };
+
   if (isLoading) {
     return (
-      <div className="h-screen w-screen bg-background-dark flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-           <div className="text-primary font-black text-2xl animate-pulse tracking-widest">LOADING PADELPRO</div>
+      <div className="h-screen w-screen bg-background-dark flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
+           <div className="flex flex-col items-center gap-2">
+             <div className="text-primary font-black text-2xl animate-pulse tracking-widest">LOADING PADELPRO</div>
+             <p className="text-text-muted text-xs">Syncing player data...</p>
+           </div>
+           
            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+
+           {showRescueBtn && (
+             <button 
+               onClick={handleForceEnter}
+               className="mt-4 px-6 py-3 bg-secondary/10 border border-secondary/30 text-secondary rounded-xl font-bold text-xs uppercase animate-in fade-in slide-in-from-bottom-4"
+             >
+               Taking too long? Click to Enter
+             </button>
+           )}
         </div>
       </div>
     );
@@ -155,6 +176,7 @@ const App: React.FC = () => {
     return <Login />;
   }
 
+  // Fallback for when user is null but loading is false (rare edge case handled by force enter)
   const currentUser = user || MOCK_USER;
 
   if (showWelcome && user) {
@@ -175,7 +197,6 @@ const App: React.FC = () => {
       case 'clubs': return <Clubs />;
       case 'profile': return <Profile user={currentUser} onUpdate={refreshProfile} onViewProfile={handleViewProfile} onOpenAdmin={() => setActiveTab('admin')} />;
       case 'admin': 
-        // Security Check: Only allow ADMIN role to render the component
         if (currentUser.role === UserRole.ADMIN) {
             return <AdminDashboard />;
         } else {
