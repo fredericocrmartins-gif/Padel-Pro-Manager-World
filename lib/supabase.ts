@@ -96,11 +96,46 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
     if (!supabase) return MOCK_USER;
 
     try {
-        const { data: profileData, error } = await promiseWithTimeout(
+        let { data: profileData, error } = await promiseWithTimeout(
             supabase.from('profiles').select('*').eq('id', userId).single(),
             3000,
             'getProfileById'
         ) as any;
+
+        // --- SELF HEALING LOGIC ---
+        // If profile is missing (PGRST116 = 0 rows), try to create it manually
+        // This handles cases where the SQL trigger failed or didn't exist during signup
+        if (error && (error.code === 'PGRST116' || error.message?.includes('0 rows'))) {
+            console.warn("⚠️ User authenticated but profile missing. Attempting self-healing...");
+            
+            const { data: userAuth } = await supabase.auth.getUser();
+            if (userAuth.user && userAuth.user.id === userId) {
+                const newProfile = {
+                    id: userId,
+                    email: userAuth.user.email,
+                    name: userAuth.user.user_metadata?.name || userAuth.user.email?.split('@')[0] || 'Player',
+                    role: 'PLAYER',
+                    avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
+                    privacy_settings: {
+                        email: 'PRIVATE', phone: 'PARTNERS', stats: 'PUBLIC', 
+                        matchHistory: 'PUBLIC', activityLog: 'PRIVATE'
+                    },
+                    created_at: new Date().toISOString()
+                };
+
+                // Insert the missing profile
+                const { error: insertError } = await supabase.from('profiles').insert(newProfile);
+                
+                if (!insertError) {
+                    console.log("✅ Profile self-healed successfully.");
+                    // Recursive call to fetch the newly created profile with correct format
+                    return getUserProfileById(userId);
+                } else {
+                    console.error("❌ Failed to self-heal profile:", insertError);
+                }
+            }
+        }
+        // ---------------------------
 
         if (error || !profileData) return null;
 

@@ -35,6 +35,14 @@ export const Login: React.FC = () => {
     setLoading(true);
     setError(null);
     
+    // Safety Timeout: Reset button if it hangs for more than 15s
+    const safetyTimer = setTimeout(() => {
+        if (loading) {
+            setLoading(false);
+            setError("Request timed out. Please check your connection or Supabase settings.");
+        }
+    }, 15000);
+
     try {
       if (isSignUp) {
         await signUpWithEmail(email, password, name);
@@ -46,6 +54,7 @@ export const Login: React.FC = () => {
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
+      clearTimeout(safetyTimer);
       setLoading(false);
     }
   };
