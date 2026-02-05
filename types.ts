@@ -2,7 +2,8 @@
 export enum UserRole {
   PLAYER = 'PLAYER',
   ORGANIZER = 'ORGANIZER',
-  CLUB_ADMIN = 'CLUB_ADMIN'
+  CLUB_ADMIN = 'CLUB_ADMIN',
+  ADMIN = 'ADMIN' // Super Admin Role
 }
 
 export enum EventType {

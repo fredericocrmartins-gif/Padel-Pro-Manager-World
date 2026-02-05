@@ -214,6 +214,8 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       division: updates.division,
       location: updates.location,
       avatar_color: updates.avatarColor,
+      role: updates.role, // Allow role updates (e.g. from Admin panel)
+      is_verified: updates.isVerified, // Allow verification
       privacy_settings: updates.privacySettings,
       updated_at: new Date().toISOString()
     };
@@ -232,6 +234,82 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
     return { success: false, error: e.message || "Unknown error" };
   }
 };
+
+// --- ADMIN SPECIFIC FUNCTIONS ---
+
+export const adminGetAllUsers = async (): Promise<UserProfile[]> => {
+  if (!supabase) return [];
+  
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100); // Pagination in future
+
+    if (error) throw error;
+
+    return data.map((profileData: any) => ({
+      id: profileData.id,
+      email: profileData.email,
+      name: profileData.name || 'Player',
+      role: (profileData.role as UserRole) || UserRole.PLAYER,
+      isVerified: profileData.is_verified,
+      avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.id}`,
+      // ... mapping minimal fields needed for list
+      username: '',
+      skillLevel: profileData.skill_level || 3.5,
+      stats: { winRate: 0, matchesPlayed: 0, elo: 0, ytdImprovement: 0 },
+      location: '',
+      avatarColor: profileData.avatar_color
+    }));
+  } catch (err) {
+    console.error("Admin fetch users error:", err);
+    return [];
+  }
+};
+
+export const adminCreateClub = async (clubData: Partial<Club>): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: true };
+  
+  try {
+    const dbClub = {
+      name: clubData.name,
+      country: clubData.country,
+      city: clubData.city,
+      address: clubData.address,
+      type: clubData.type,
+      court_count: clubData.courtCount,
+      has_parking: clubData.hasParking,
+      has_showers: clubData.hasShowers,
+      has_bar: clubData.hasBar,
+      has_shop: clubData.hasShop,
+      phone: clubData.phone,
+      email: clubData.email,
+      website: clubData.website,
+      image_url: clubData.image
+    };
+
+    const { error } = await supabase.from('clubs').insert(dbClub);
+    if (error) throw error;
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const adminDeleteClub = async (clubId: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: true };
+  try {
+    const { error } = await supabase.from('clubs').delete().eq('id', clubId);
+    if (error) throw error;
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+// ... (Rest of existing functions uploadAvatar, etc. remain unchanged)
 
 export const uploadAvatar = async (userId: string, file: File): Promise<{ url: string | null; error: string | null }> => {
   if (!supabase) {

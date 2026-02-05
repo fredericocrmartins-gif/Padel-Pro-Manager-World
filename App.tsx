@@ -11,9 +11,9 @@ import { Login } from './pages/Login';
 import { AuthSuccess } from './pages/AuthSuccess';
 import { Profile } from './pages/Profile';
 import { PublicProfile } from './pages/PublicProfile';
-import { AdminBrands } from './pages/AdminBrands'; // New Page
+import { AdminDashboard } from './pages/AdminDashboard'; // Updated Import
 import { supabase, getCurrentUserProfile, signOut } from './lib/supabase';
-import { UserProfile } from './types';
+import { UserProfile, UserRole } from './types';
 import { MOCK_USER } from './constants';
 
 const App: React.FC = () => {
@@ -142,41 +142,38 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    // Priority: Viewing Another User
     if (viewingProfileId) {
-        return (
-            <PublicProfile 
-                targetUserId={viewingProfileId} 
-                currentUserId={currentUser.id} 
-                onBack={() => setViewingProfileId(null)}
-            />
-        );
+        return <PublicProfile targetUserId={viewingProfileId} currentUserId={currentUser.id} onBack={() => setViewingProfileId(null)} />;
     }
 
     switch (activeTab) {
-      case 'home':
-        return <Dashboard userProfile={currentUser} onStartTournament={() => handleTabChange('tournament')} />;
-      case 'discovery':
-        return <Discovery />;
-      case 'training':
-        return <Training />;
-      case 'rankings':
-        return <Rankings />;
-      case 'tournament':
-        return <TournamentLive />;
-      case 'clubs':
-        return <Clubs />;
-      case 'profile':
-        return <Profile user={currentUser} onUpdate={refreshProfile} onViewProfile={handleViewProfile} />;
-      case 'admin':
-        return <AdminBrands />;
-      default:
-        return <Dashboard userProfile={currentUser} onStartTournament={() => handleTabChange('tournament')} />;
+      case 'home': return <Dashboard userProfile={currentUser} onStartTournament={() => handleTabChange('tournament')} />;
+      case 'discovery': return <Discovery />;
+      case 'training': return <Training />;
+      case 'rankings': return <Rankings />;
+      case 'tournament': return <TournamentLive />;
+      case 'clubs': return <Clubs />;
+      case 'profile': return <Profile user={currentUser} onUpdate={refreshProfile} onViewProfile={handleViewProfile} />;
+      case 'admin': 
+        // Security Check: Only allow ADMIN role to render the component
+        if (currentUser.role === UserRole.ADMIN) {
+            return <AdminDashboard />;
+        } else {
+            return (
+                <div className="flex flex-col items-center justify-center h-full text-center p-10">
+                    <span className="material-symbols-outlined text-6xl text-secondary mb-4">gpp_bad</span>
+                    <h1 className="text-3xl font-black mb-2">Access Denied</h1>
+                    <p className="text-text-muted">You do not have permission to view the Admin Dashboard.</p>
+                    <button onClick={() => setActiveTab('home')} className="mt-6 px-6 py-3 bg-surface-light rounded-xl font-bold">Go Home</button>
+                </div>
+            );
+        }
+      default: return <Dashboard userProfile={currentUser} onStartTournament={() => handleTabChange('tournament')} />;
     }
   };
 
   return (
-    <AppShell activeTab={viewingProfileId ? 'profile' : activeTab} setActiveTab={handleTabChange}>
+    <AppShell activeTab={viewingProfileId ? 'profile' : activeTab} setActiveTab={handleTabChange} isAdmin={currentUser.role === UserRole.ADMIN}>
       {renderContent()}
     </AppShell>
   );

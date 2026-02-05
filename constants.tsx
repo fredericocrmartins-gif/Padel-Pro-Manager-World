@@ -397,186 +397,205 @@ export const PADEL_RACKET_BRANDS: Brand[] = [
   { id: 'other', name: 'Other / Not Listed', logo: 'https://ui-avatars.com/api/?name=?&background=25f4c0&color=10221e&size=64' }
 ];
 
-export const MOCK_CLUBS_DATA: Club[] = [
-  {
-    id: 'c1',
-    name: 'Padel Center Lisboa',
-    country: 'PT',
-    city: 'Lisboa',
-    address: 'Av. Ceuta Norte, 1300-125 Lisboa',
-    image: 'https://picsum.photos/seed/c1/600/400',
-    type: 'INDOOR',
-    courtCount: 12,
-    hasParking: true,
-    hasShowers: true,
-    hasBar: true,
-    hasShop: true,
-    phone: '+351 21 364 0000',
-    website: 'https://padelcenter.pt',
-    email: 'info@padelcenter.pt',
-    openingHours: { weekDays: '08:00 - 00:00', weekends: '09:00 - 22:00' }
-  } as any, // casting to avoid strict type checks on optional fields during mock
-  {
-    id: 'c2',
-    name: 'Airfut Padel',
-    country: 'PT',
-    city: 'Loures',
-    address: 'Rua do Prior Velho, Loures',
-    image: 'https://picsum.photos/seed/c2/600/400',
-    type: 'INDOOR',
-    courtCount: 8,
-    hasParking: true,
-    hasShowers: true,
-    hasBar: true,
-    hasShop: false,
-    phone: '+351 91 111 2222',
-  } as any,
-  {
-    id: 'c3',
-    name: 'Quinta da Marinha Racket Club',
-    country: 'PT',
-    city: 'Cascais',
-    address: 'Rua das Palmeiras, Cascais',
-    image: 'https://picsum.photos/seed/c3/600/400',
-    type: 'OUTDOOR',
-    courtCount: 10,
-    hasParking: true,
-    hasShowers: true,
-    hasBar: true,
-    hasShop: true,
-    phone: '+351 21 486 0000',
-    website: 'https://qmracketclub.pt'
-  } as any,
-  {
-    id: 'c4',
-    name: 'LX Indoor Padel',
-    country: 'PT',
-    city: 'Lisboa',
-    address: 'Rua da Fábrica, Lisboa',
-    image: 'https://picsum.photos/seed/c4/600/400',
-    type: 'INDOOR',
-    courtCount: 6,
-    hasParking: false,
-    hasShowers: true,
-    hasBar: false,
-    hasShop: true,
-  } as any,
-  {
-    id: 'c5',
-    name: 'Vilamoura Tennis & Padel Academy',
-    country: 'PT',
-    city: 'Faro',
-    address: 'Vilamoura Resort, Algarve',
-    image: 'https://picsum.photos/seed/c5/600/400',
-    type: 'OUTDOOR',
-    courtCount: 14,
-    hasParking: true,
-    hasShowers: true,
-    hasBar: true,
-    hasShop: true,
-  } as any
-];
-
-export const MOCK_USER: UserProfile = {
-  id: 'u1',
-  name: 'Alex Rivera',
-  username: '@alex_rivera',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-  skillLevel: 4.5,
-  role: UserRole.ORGANIZER,
-  location: 'Miami, FL',
-  club: 'Miami Padel Club',
-  country: 'US',
-  state: 'Florida (Miami)',
-  isVerified: true,
-  stats: {
-    winRate: 68,
-    matchesPlayed: 142,
-    elo: 1450,
-    ytdImprovement: 25
-  }
-};
-
-export const MOCK_DRILLS: TrainingExercise[] = [
-  { id: 'd1', title: 'Volley Precision', duration: 15, category: 'Technique', difficulty: 'Intermediate', thumbnail: 'https://picsum.photos/seed/d1/400/200', description: 'Focus on short backswing and contact in front of the body.' },
-  { id: 'd2', title: 'Bandeja Mechanics', duration: 20, category: 'Technique', difficulty: 'Pro', thumbnail: 'https://picsum.photos/seed/d2/400/200', description: 'Mastering the tray shot to keep opponents at the back.' },
-  { id: 'd3', title: 'Explosive Footwork', duration: 10, category: 'Fitness', difficulty: 'Beginner', thumbnail: 'https://picsum.photos/seed/d3/400/200', description: 'Lateral movements and split-step drills.' },
-  { id: 'd4', title: 'Glass Defense 101', duration: 30, category: 'Tactical', difficulty: 'Intermediate', thumbnail: 'https://picsum.photos/seed/d4/400/200', description: 'Learning how to use the back wall to your advantage.' },
-  { id: 'd5', title: 'Shoulder Mobility', duration: 5, category: 'Mobility', difficulty: 'Beginner', thumbnail: 'https://picsum.photos/seed/d5/400/200', description: 'Dynamic stretches to prevent rotator cuff injuries.' },
-  { id: 'd6', title: 'Vibora Power', duration: 25, category: 'Technique', difficulty: 'Pro', thumbnail: 'https://picsum.photos/seed/d6/400/200', description: 'Aggressive overhead with heavy side-spin.' },
-  { id: 'd7', title: 'Lobs & Positioning', duration: 15, category: 'Tactical', difficulty: 'Intermediate', thumbnail: 'https://picsum.photos/seed/d7/400/200', description: 'When to lob and how to transition to the net.' },
-  { id: 'd8', title: 'Agility Ladder', duration: 12, category: 'Fitness', difficulty: 'Intermediate', thumbnail: 'https://picsum.photos/seed/d8/400/200', description: 'High-speed footwork patterns.' },
-  { id: 'd9', title: 'Hip Openers', duration: 8, category: 'Mobility', difficulty: 'Beginner', thumbnail: 'https://picsum.photos/seed/d9/400/200', description: 'Essential stretches for deep padel lunges.' }
-];
-
-export const MOCK_RANKINGS: RankingEntry[] = [
-  { rank: 1, name: 'Arturo Coello', points: 12050, trend: 'up', avatar: 'https://picsum.photos/seed/a1/100/100', country: 'ES' },
-  { rank: 2, name: 'Agustin Tapia', points: 11920, trend: 'steady', avatar: 'https://picsum.photos/seed/a2/100/100', country: 'AR' },
-  { rank: 3, name: 'Alejandro Galán', points: 10845, trend: 'up', avatar: 'https://picsum.photos/seed/a3/100/100', country: 'ES' },
-  { rank: 4, name: 'Juan Lebron', points: 10600, trend: 'down', avatar: 'https://picsum.photos/seed/a4/100/100', country: 'ES' },
-  { rank: 5, name: 'Martin Di Nenno', points: 9420, trend: 'steady', avatar: 'https://picsum.photos/seed/a5/100/100', country: 'AR' }
-];
-
-export const MOCK_EVENTS: PadelEvent[] = [
-  {
-    id: 'e1',
-    organizerId: 'u1',
-    title: 'Friday Night Smash',
-    type: EventType.MATCH,
-    date: '2024-05-24',
-    time: '18:00 - 20:00',
-    location: 'Central Padel Club',
-    city: 'Miami',
-    maxPlayers: 4,
-    skillRange: { min: 3.5, max: 5.0 },
-    players: [MOCK_USER],
-    status: 'OPEN',
-    rules: { sets: 3, goldenPoint: true, tieBreak: 'standard', teamFormation: 'fixed' }
-  },
-  {
-    id: 'e2',
-    organizerId: 'u2',
-    title: 'Beginner Friendly Mix',
-    type: EventType.MATCH,
-    date: '2024-05-25',
-    time: '10:00 - 12:00',
-    location: 'Beachside Padel',
-    city: 'Miami',
-    maxPlayers: 4,
-    skillRange: { min: 2.0, max: 3.5 },
-    players: [],
-    status: 'OPEN',
-    rules: { sets: 3, goldenPoint: false, tieBreak: 'standard', teamFormation: 'americano' }
-  }
-];
-
-export const MOCK_JOIN_REQUESTS: JoinRequest[] = [
-  {
-    id: 'jr1',
-    eventId: 'e1',
-    requesterId: 'u3',
-    status: 'PENDING',
-    message: 'Hey, I play regularly at level 4.0. Can I join?',
-    createdAt: new Date().toISOString(),
-    requester: {
-      id: 'u3',
-      name: 'Daniel Cruz',
-      username: '@dcruz',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Daniel',
-      skillLevel: 4.0,
-      role: UserRole.PLAYER,
-      location: 'Miami, FL',
-      stats: { winRate: 55, matchesPlayed: 40, elo: 1200, ytdImprovement: 10 }
-    }
-  }
-];
-
 export const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: 'home' },
   { id: 'discovery', label: 'Explore', icon: 'explore' },
   { id: 'clubs', label: 'Clubs', icon: 'domain' },
   { id: 'training', label: 'Training', icon: 'fitness_center' },
   { id: 'rankings', label: 'Rankings', icon: 'trophy' },
-  { id: 'profile', label: 'Profile', icon: 'person' },
-  { id: 'admin', label: 'Admin', icon: 'admin_panel_settings' } // Temporary admin link
+  { id: 'profile', label: 'Profile', icon: 'person' }
+  // Admin link is now handled dynamically in AppShell.tsx
+];
+
+// --- MOCK DATA ---
+
+export const MOCK_USER: UserProfile = {
+  id: 'user-mock-001',
+  email: 'alex.rivera@example.com',
+  name: 'Alex Rivera',
+  firstName: 'Alex',
+  lastName: 'Rivera',
+  nickname: 'The Wall',
+  username: 'arivera',
+  avatar: 'https://i.pravatar.cc/300?u=user-mock-001',
+  avatarColor: '#25f4c0',
+  skillLevel: 4.5,
+  role: UserRole.PLAYER,
+  isVerified: true,
+  stats: {
+    winRate: 68,
+    matchesPlayed: 142,
+    elo: 1450,
+    ytdImprovement: 120,
+    rankingPoints: 1420
+  },
+  location: 'Lisboa, Portugal',
+  country: 'PT',
+  city: 'Lisboa',
+  state: 'PT-11',
+  homeClub: 'Padel Center Lisboa',
+  division: 'M2',
+  hand: 'RIGHT',
+  courtPosition: 'LEFT',
+  gender: 'MALE',
+  height: 182,
+  birthDate: '1990-05-15',
+  phone: '+351 912 345 678',
+  racketBrand: 'Bullpadel',
+  privacySettings: {
+    email: 'PRIVATE',
+    phone: 'PARTNERS',
+    stats: 'PUBLIC',
+    matchHistory: 'PUBLIC',
+    activityLog: 'PRIVATE'
+  }
+};
+
+export const MOCK_CLUBS_DATA: Club[] = [
+  {
+    id: 'c1',
+    name: 'Padel Center Lisboa',
+    country: 'Portugal',
+    city: 'Lisboa',
+    address: 'Av. de Ceuta',
+    type: 'INDOOR',
+    courtCount: 8,
+    hasParking: true,
+    hasShowers: true,
+    hasBar: true,
+    hasShop: true,
+    image: 'https://picsum.photos/seed/club1/800/600',
+    phone: '+351 210 000 000',
+    email: 'info@padelcenterlisboa.pt',
+    openingHours: { weekdays: '07:00 - 00:00', weekends: '08:00 - 22:00' }
+  },
+  {
+    id: 'c2',
+    name: 'Airfut Padel',
+    country: 'Portugal',
+    city: 'Loures',
+    address: 'Rua da Republica',
+    type: 'INDOOR',
+    courtCount: 6,
+    hasParking: true,
+    hasShowers: true,
+    hasBar: true,
+    hasShop: false,
+    image: 'https://picsum.photos/seed/club2/800/600'
+  },
+  {
+    id: 'c3',
+    name: 'Clube de Padel',
+    country: 'Portugal',
+    city: 'Lisboa',
+    address: 'Alcântara',
+    type: 'OUTDOOR',
+    courtCount: 12,
+    hasParking: false,
+    hasShowers: true,
+    hasBar: true,
+    hasShop: true,
+    image: 'https://picsum.photos/seed/club3/800/600'
+  }
+];
+
+export const MOCK_EVENTS: PadelEvent[] = [
+  {
+    id: 'evt-1',
+    organizerId: 'user-mock-001',
+    title: 'Friday Night Mixer',
+    type: EventType.MINI_TOURNEY,
+    date: '2023-11-24',
+    time: '19:00',
+    location: 'Padel Center Lisboa',
+    city: 'Lisboa',
+    players: [MOCK_USER, { ...MOCK_USER, id: 'u2', name: 'Maria Silva' }, { ...MOCK_USER, id: 'u3', name: 'Joao Santos' }],
+    maxPlayers: 8,
+    skillRange: { min: 3.5, max: 4.5 },
+    rules: { sets: 1, goldenPoint: true, tieBreak: 'standard', teamFormation: 'americano' },
+    status: 'OPEN'
+  },
+  {
+    id: 'evt-2',
+    organizerId: 'u4',
+    title: 'Morning Training Match',
+    type: EventType.MATCH,
+    date: '2023-11-25',
+    time: '09:00',
+    location: 'Airfut Padel',
+    city: 'Loures',
+    players: [{ ...MOCK_USER, id: 'u4', name: 'Pedro Costa' }],
+    maxPlayers: 4,
+    skillRange: { min: 3.0, max: 4.0 },
+    rules: { sets: 3, goldenPoint: true, tieBreak: 'standard', teamFormation: 'fixed' },
+    status: 'OPEN'
+  }
+];
+
+export const MOCK_JOIN_REQUESTS: JoinRequest[] = [
+  {
+    id: 'req-1',
+    eventId: 'evt-1',
+    requesterId: 'u5',
+    status: 'PENDING',
+    message: 'Would love to join! Level 4.0 player.',
+    createdAt: '2023-11-23T10:00:00Z',
+    requester: { ...MOCK_USER, id: 'u5', name: 'Ana Pereira', skillLevel: 4.0 }
+  }
+];
+
+export const MOCK_RANKINGS: RankingEntry[] = [
+  { rank: 1, name: 'Juan Lebrón', points: 14200, trend: 'steady', avatar: 'https://ui-avatars.com/api/?name=JL&background=E55300&color=fff', country: 'ES' },
+  { rank: 2, name: 'Ale Galán', points: 13850, trend: 'steady', avatar: 'https://ui-avatars.com/api/?name=AG&background=000&color=fff', country: 'ES' },
+  { rank: 3, name: 'Agustín Tapia', points: 12500, trend: 'up', avatar: 'https://ui-avatars.com/api/?name=AT&background=10221e&color=25f4c0', country: 'AR' },
+  { rank: 4, name: 'Arturo Coello', points: 12100, trend: 'up', avatar: 'https://ui-avatars.com/api/?name=AC&background=10221e&color=25f4c0', country: 'ES' },
+  { rank: 5, name: 'Martin Di Nenno', points: 10900, trend: 'down', avatar: 'https://ui-avatars.com/api/?name=MD&background=10221e&color=25f4c0', country: 'AR' },
+];
+
+export const MOCK_DRILLS: TrainingExercise[] = [
+  {
+    id: 'drill-1',
+    title: 'Vibora Mechanics',
+    duration: 15,
+    category: 'Technique',
+    difficulty: 'Intermediate',
+    thumbnail: 'https://picsum.photos/seed/drill1/400/300',
+    description: 'Master the side-spin smash used to keep opponents in the corner.'
+  },
+  {
+    id: 'drill-2',
+    title: 'Glass Defense',
+    duration: 20,
+    category: 'Tactical',
+    difficulty: 'Beginner',
+    thumbnail: 'https://picsum.photos/seed/drill2/400/300',
+    description: 'Learn how to read the ball off the back glass and return with control.'
+  },
+  {
+    id: 'drill-3',
+    title: 'Net Volley Reaction',
+    duration: 10,
+    category: 'Technique',
+    difficulty: 'Pro',
+    thumbnail: 'https://picsum.photos/seed/drill3/400/300',
+    description: 'High speed volley drills to improve reaction time at the net.'
+  },
+  {
+    id: 'drill-4',
+    title: 'Split Step Timing',
+    duration: 12,
+    category: 'Mobility',
+    difficulty: 'Intermediate',
+    thumbnail: 'https://picsum.photos/seed/drill4/400/300',
+    description: 'Improve your movement efficiency by mastering the split step.'
+  },
+  {
+    id: 'drill-5',
+    title: 'Box Jumps & Explosiveness',
+    duration: 25,
+    category: 'Fitness',
+    difficulty: 'Pro',
+    thumbnail: 'https://picsum.photos/seed/drill5/400/300',
+    description: 'Plyometric exercises to increase vertical jump and court speed.'
+  }
 ];

@@ -7,9 +7,10 @@ interface AppShellProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: (id: string) => void;
+  isAdmin?: boolean; // Prop to check permission
 }
 
-export const AppShell: React.FC<AppShellProps> = ({ children, activeTab, setActiveTab }) => {
+export const AppShell: React.FC<AppShellProps> = ({ children, activeTab, setActiveTab, isAdmin }) => {
   return (
     <div className="flex flex-col h-screen bg-background-dark text-white font-body">
       {/* DEMO MODE BANNER */}
@@ -28,7 +29,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, activeTab, setActi
           </div>
           
           <nav className="flex-1 space-y-2">
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.filter(item => item.id !== 'admin').map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
@@ -42,6 +43,22 @@ export const AppShell: React.FC<AppShellProps> = ({ children, activeTab, setActi
                 <span className="font-medium">{item.label}</span>
               </button>
             ))}
+            
+            {/* ADMIN LINK (Only if Admin) */}
+            {isAdmin && (
+                <button
+                    onClick={() => setActiveTab('admin')}
+                    className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all mt-4 border border-primary/20 ${
+                    activeTab === 'admin' 
+                        ? 'bg-primary/20 text-primary font-bold' 
+                        : 'text-primary hover:bg-primary/10'
+                    }`}
+                >
+                    <span className="material-symbols-outlined">admin_panel_settings</span>
+                    <span className="font-medium">Admin Panel</span>
+                </button>
+            )}
+
             {/* Contextual Tournament Navigation */}
             {activeTab === 'tournament' && (
               <button
@@ -84,7 +101,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, activeTab, setActi
         </main>
 
         <nav className="fixed bottom-0 left-0 right-0 h-20 bg-surface-dark/95 backdrop-blur-md border-t border-border-dark px-6 flex items-center justify-between z-50">
-          {NAV_ITEMS.map((item) => (
+          {NAV_ITEMS.filter(item => item.id !== 'admin').map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
@@ -98,6 +115,18 @@ export const AppShell: React.FC<AppShellProps> = ({ children, activeTab, setActi
               <span className="text-[10px] font-bold uppercase tracking-wider">{item.label}</span>
             </button>
           ))}
+          {/* Mobile Admin Icon */}
+          {isAdmin && (
+             <button
+                onClick={() => setActiveTab('admin')}
+                className={`flex flex-col items-center gap-1 transition-all ${
+                  activeTab === 'admin' ? 'text-primary' : 'text-text-muted'
+                }`}
+              >
+                <span className="material-symbols-outlined">admin_panel_settings</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Admin</span>
+              </button>
+          )}
         </nav>
       </div>
     </div>
