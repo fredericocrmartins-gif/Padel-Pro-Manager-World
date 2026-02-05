@@ -211,6 +211,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       alert(`Upload failed: ${error.message || "Unknown error"}. Ensure 'avatars' bucket exists in Supabase Storage.`);
     } finally {
       setIsUploading(false);
+      // Reset input so same file can be selected again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -337,10 +339,11 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                 </div>
              )}
 
+             {/* Upload Button - Always visible now */}
              <button 
                onClick={() => fileInputRef.current?.click()}
-               disabled={isUploading || !isEditing}
-               className={`absolute bottom-0 right-0 p-2 bg-background-dark border border-border-dark rounded-full text-text-muted transition-colors z-10 ${isEditing ? 'hover:text-white cursor-pointer' : 'opacity-50 cursor-default'}`}
+               disabled={isUploading}
+               className="absolute bottom-0 right-0 p-2 bg-background-dark border border-border-dark rounded-full text-text-muted hover:text-white transition-colors z-10 cursor-pointer shadow-lg hover:scale-110"
                title="Upload Image"
              >
                <span className="material-symbols-outlined text-sm">photo_camera</span>
