@@ -397,7 +397,6 @@ export const PADEL_RACKET_BRANDS: Brand[] = [
   { id: 'other', name: 'Other / Not Listed', logo: 'https://ui-avatars.com/api/?name=?&background=25f4c0&color=10221e&size=64' }
 ];
 
-// --- RICH CLUB DATA FOR CLUBS PAGE ---
 export const MOCK_CLUBS_DATA: Club[] = [
   {
     id: 'c1',
@@ -477,8 +476,6 @@ export const MOCK_CLUBS_DATA: Club[] = [
     hasShop: true,
   } as any
 ];
-
-// --- EXISTING MOCK DATA ---
 
 export const MOCK_USER: UserProfile = {
   id: 'u1',
@@ -580,5 +577,6 @@ export const NAV_ITEMS = [
   { id: 'clubs', label: 'Clubs', icon: 'domain' },
   { id: 'training', label: 'Training', icon: 'fitness_center' },
   { id: 'rankings', label: 'Rankings', icon: 'trophy' },
-  { id: 'profile', label: 'Profile', icon: 'person' }
+  { id: 'profile', label: 'Profile', icon: 'person' },
+  { id: 'admin', label: 'Admin', icon: 'admin_panel_settings' } // Temporary admin link
 ];

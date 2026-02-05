@@ -10,7 +10,8 @@ import { Clubs } from './pages/Clubs';
 import { Login } from './pages/Login';
 import { AuthSuccess } from './pages/AuthSuccess';
 import { Profile } from './pages/Profile';
-import { PublicProfile } from './pages/PublicProfile'; // New Page
+import { PublicProfile } from './pages/PublicProfile';
+import { AdminBrands } from './pages/AdminBrands'; // New Page
 import { supabase, getCurrentUserProfile, signOut } from './lib/supabase';
 import { UserProfile } from './types';
 import { MOCK_USER } from './constants';
@@ -20,7 +21,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [viewingProfileId, setViewingProfileId] = useState<string | null>(null); // New State
+  const [viewingProfileId, setViewingProfileId] = useState<string | null>(null);
   const isMounted = useRef(true);
 
   // 1. ABSOLUTE SAFETY TIMER (The "Big Hammer")
@@ -167,6 +168,8 @@ const App: React.FC = () => {
         return <Clubs />;
       case 'profile':
         return <Profile user={currentUser} onUpdate={refreshProfile} onViewProfile={handleViewProfile} />;
+      case 'admin':
+        return <AdminBrands />;
       default:
         return <Dashboard userProfile={currentUser} onStartTournament={() => handleTabChange('tournament')} />;
     }
