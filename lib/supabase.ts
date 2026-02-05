@@ -191,7 +191,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
   if (!supabase) return { success: true }; 
 
   try {
-    const dbUpdates = {
+    const dbUpdates: any = {
       id: userId,
       name: updates.name,
       first_name: updates.firstName,
@@ -210,15 +210,51 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       home_club: updates.homeClub,
       division: updates.division,
       location: updates.location,
-      avatar_color: updates.avatarColor, // Map frontend prop to DB column
+      avatar_color: updates.avatarColor,
       updated_at: new Date().toISOString()
     };
-    Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
+    
+    // Only add avatar_url if specifically updated (e.g. upload)
+    if (updates.avatar) {
+        dbUpdates.avatar_url = updates.avatar;
+    }
+
+    Object.keys(dbUpdates).forEach(key => dbUpdates[key] === undefined && delete dbUpdates[key]);
+    
     const { error } = await supabase.from('profiles').upsert(dbUpdates);
     if (error) return { success: false, error: error.message };
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message || "Unknown error" };
+  }
+};
+
+export const uploadAvatar = async (userId: string, file: File): Promise<{ url: string | null; error: string | null }> => {
+  if (!supabase) {
+    // Mock upload for demo
+    return { url: URL.createObjectURL(file), error: null };
+  }
+
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    // Upload to 'avatars' bucket
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    // Get Public URL
+    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    return { url: data.publicUrl, error: null };
+  } catch (error: any) {
+    console.error("Upload error:", error);
+    return { url: null, error: error.message };
   }
 };
 

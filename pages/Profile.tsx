@@ -1,8 +1,10 @@
 
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useRef } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender } from '../types';
-import { signOut, updateUserProfile } from '../lib/supabase';
+import { signOut, updateUserProfile, uploadAvatar } from '../lib/supabase';
 import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES, PADEL_CLUBS } from '../constants';
+// @ts-ignore
+import imageCompression from 'browser-image-compression';
 
 interface ProfileProps {
   user: UserProfile;
@@ -111,6 +113,8 @@ const DefaultRacketAvatar: React.FC<{ color: string }> = ({ color }) => {
 export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -135,6 +139,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     division: user.division || 'M3',
 
     // Visuals
+    avatar: user.avatar,
     avatarColor: user.avatarColor || '#25f4c0'
   });
 
@@ -146,7 +151,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
 
   // Check if we should show the default racket or the user's custom image
   // We treat "dicebear" URLs (the old default) as "no image set", so we show the racket instead.
-  const hasCustomAvatar = user.avatar && !user.avatar.includes('dicebear');
+  const hasCustomAvatar = formData.avatar && !formData.avatar.includes('dicebear');
 
   // Handlers for Location Cascading Updates
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -169,6 +174,44 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   const handleSignOut = async () => {
     await signOut();
     window.location.reload();
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+
+    try {
+      // 1. Compression Options
+      const options = {
+        maxSizeMB: 0.2, // Max size in MB (200KB)
+        maxWidthOrHeight: 800, // Max dimension
+        useWebWorker: true,
+        fileType: 'image/jpeg'
+      };
+
+      // 2. Compress
+      const compressedFile = await imageCompression(file, options);
+      
+      // 3. Upload
+      const { url, error } = await uploadAvatar(user.id, compressedFile);
+
+      if (error) throw new Error(error);
+
+      if (url) {
+        setFormData(prev => ({ ...prev, avatar: url }));
+        // Save immediately to profile so it persists
+        await updateUserProfile(user.id, { avatar: url });
+        if (onUpdate) onUpdate();
+      }
+
+    } catch (error: any) {
+      console.error("Image upload failed:", error);
+      alert(`Upload failed: ${error.message || "Unknown error"}. Ensure 'avatars' bucket exists in Supabase Storage.`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -238,7 +281,14 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleImageUpload} 
+        accept="image/*" 
+        className="hidden" 
+      />
+
       {/* Header */}
       <header className="flex flex-col md:flex-row items-center justify-between gap-6 bg-surface-dark p-8 rounded-[3rem] border border-border-dark relative overflow-visible">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
@@ -246,9 +296,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
         <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
           <div className="relative group">
              {/* Avatar Render Logic */}
-             <div className="size-28 rounded-full shadow-xl overflow-hidden bg-surface-dark border-4 border-surface-light flex items-center justify-center">
-                {hasCustomAvatar ? (
-                  <img src={user.avatar} className="w-full h-full object-cover" alt="profile"/>
+             <div className="size-28 rounded-full shadow-xl overflow-hidden bg-surface-dark border-4 border-surface-light flex items-center justify-center relative">
+                {isUploading ? (
+                  <div className="flex flex-col items-center justify-center gap-1 text-text-muted">
+                    <span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                  </div>
+                ) : hasCustomAvatar ? (
+                  <img src={formData.avatar} className="w-full h-full object-cover" alt="profile"/>
                 ) : (
                   <div className="w-full h-full p-1">
                     <DefaultRacketAvatar color={isEditing ? formData.avatarColor : (user.avatarColor || '#25f4c0')} />
@@ -256,9 +310,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                 )}
              </div>
 
-             {/* Color Picker (Only visible in edit mode) */}
+             {/* Color Picker (Only visible in edit mode AND no custom avatar) */}
              {isEditing && !hasCustomAvatar && (
-                <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 bg-surface-dark border border-border-dark rounded-2xl p-2 shadow-2xl z-50 animate-in zoom-in duration-200">
+                <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 bg-surface-dark border border-border-dark rounded-2xl p-3 shadow-2xl z-50 animate-in zoom-in duration-200 flex flex-col items-center gap-3">
                    <div className="grid grid-cols-7 gap-1.5 w-max">
                      {PADEL_RACKET_COLORS.map(c => (
                        <button
@@ -270,15 +324,24 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                        />
                      ))}
                    </div>
+                   {/* Mini Save Button specifically for Color Picker UX */}
+                   <button 
+                    onClick={handleSave} 
+                    className="w-full py-1.5 bg-background-dark text-primary text-[9px] font-black uppercase rounded-lg border border-primary/20 hover:bg-primary hover:text-background-dark transition-all"
+                   >
+                     Save Color
+                   </button>
+
                    {/* Triangle pointer */}
                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-surface-dark border-t border-l border-border-dark rotate-45"></div>
                 </div>
              )}
 
              <button 
-               onClick={() => alert("Image upload coming soon! For now, customize your racket color.")}
-               className="absolute bottom-0 right-0 p-2 bg-background-dark border border-border-dark rounded-full text-text-muted hover:text-white transition-colors z-10"
-               title="Upload Image (Coming Soon)"
+               onClick={() => fileInputRef.current?.click()}
+               disabled={isUploading || !isEditing}
+               className={`absolute bottom-0 right-0 p-2 bg-background-dark border border-border-dark rounded-full text-text-muted transition-colors z-10 ${isEditing ? 'hover:text-white cursor-pointer' : 'opacity-50 cursor-default'}`}
+               title="Upload Image"
              >
                <span className="material-symbols-outlined text-sm">photo_camera</span>
              </button>
