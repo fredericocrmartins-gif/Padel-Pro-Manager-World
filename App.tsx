@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppShell } from './components/AppShell';
 import { Dashboard } from './pages/Dashboard';
 import { Discovery } from './pages/Discovery';
@@ -19,10 +19,27 @@ const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+  const isMounted = useRef(true);
 
-  // Auth Effect
+  // 1. ABSOLUTE SAFETY TIMER (The "Big Hammer")
+  // This effect runs independently of any auth logic. 
+  // It guarantees the loading screen disappears after 3 seconds, no matter what.
   useEffect(() => {
-    let mounted = true;
+    const timer = setTimeout(() => {
+      if (isMounted.current) {
+        setIsLoading((prev) => {
+          if (prev) console.warn("⚠️ PadelPro: Forced app load via safety timer");
+          return false;
+        });
+      }
+    }, 3000);
+
+    return () => { clearTimeout(timer); };
+  }, []);
+
+  // 2. Auth & Data Fetching
+  useEffect(() => {
+    isMounted.current = true;
 
     // Check URL for Supabase Email Verification markers
     const hash = window.location.hash;
@@ -30,74 +47,60 @@ const App: React.FC = () => {
       setShowWelcome(true);
     }
 
-    // SAFETY FAILSAFE:
-    // If auth checks hang for more than 5 seconds (e.g. slow network), force stop loading.
-    const safetyTimer = setTimeout(() => {
-      if (mounted && isLoading) {
-        console.warn("⚠️ PadelPro: Auth check timed out. Forcing app load.");
-        setIsLoading(false);
-      }
-    }, 5000);
-
     const checkUser = async () => {
       try {
-        // 1. FAST CHECK: Do we have a local session?
-        // This prevents "flicker" of login screen if we have a valid token in localStorage.
+        // 1. FAST CHECK: Local Session
         if (supabase) {
+            // We use a safe wrapper inside supabase.ts, but standard call here is fine 
+            // because the Safety Timer above protects us from hanging.
             const { data: { session } } = await supabase.auth.getSession();
+            
             if (!session) {
                 // Definitely logged out
-                if (mounted) setIsLoading(false);
+                if (isMounted.current) setIsLoading(false);
                 return;
             }
         }
 
-        // 2. FULL CHECK: Get profile data (DB fetch)
+        // 2. FULL CHECK: Get profile data
         const profile = await getCurrentUserProfile();
-        if (mounted) {
-          setUser(profile);
+        
+        if (isMounted.current) {
+          if (profile) setUser(profile);
           setIsLoading(false);
         }
       } catch (error) {
         console.error("Failed to check user session:", error);
-        if (mounted) setIsLoading(false);
-      } finally {
-        // If the check finished (success or error), clear the safety timer
-        clearTimeout(safetyTimer);
+        if (isMounted.current) setIsLoading(false);
       }
     };
 
     checkUser();
 
-    // 3. Listen for Auth changes (Sign In / Sign Out / Refresh)
+    // 3. Listen for Auth changes
     if (supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        // Only refresh profile on explicit sign-in or initial session load, 
-        // OR if token refreshed (keeps session alive in app state)
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-           // We might already have user from checkUser, but it doesn't hurt to ensure sync
            if (!user) {
              const profile = await getCurrentUserProfile();
-             if (mounted) setUser(profile);
+             if (isMounted.current && profile) setUser(profile);
            }
         } else if (event === 'SIGNED_OUT') {
-          if (mounted) {
+          if (isMounted.current) {
              setUser(null);
              setShowWelcome(false);
           }
         }
       });
       return () => {
-        mounted = false;
+        isMounted.current = false;
         subscription.unsubscribe();
-        clearTimeout(safetyTimer);
       };
     } else {
       // Demo Mode
       setIsLoading(false);
-      clearTimeout(safetyTimer);
     }
-  }, []); // Remove dependencies to run only once on mount
+  }, []); 
 
   const handleSignOut = async () => {
     await signOut();
