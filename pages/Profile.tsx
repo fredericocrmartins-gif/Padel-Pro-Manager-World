@@ -302,6 +302,23 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                <span className="text-xl">{PADEL_COUNTRIES.find(c => c.code === formData.country)?.flag || '🌍'}</span>
                {user.role} • {formData.state ? getRegionName(formData.country, formData.state) : formData.country}
              </p>
+             
+             {/* RESTORED: Level, Division, Verification Chips */}
+             <div className="flex gap-2 mt-3 justify-center md:justify-start flex-wrap">
+                <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase">
+                  Level {user.skillLevel}
+                </span>
+                {formData.division && (
+                  <span className="px-3 py-1 bg-surface-light text-white border border-border-dark rounded-lg text-[10px] font-black uppercase">
+                    Div {formData.division}
+                  </span>
+                )}
+                {user.isVerified && (
+                  <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">verified</span> Verified
+                  </span>
+                )}
+             </div>
           </div>
         </div>
 
@@ -338,12 +355,30 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
            <div className="space-y-6">
+              {/* RESTORED: Expanded Player Bio */}
               <div className="bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8">
-                  <h3 className="text-lg font-black mb-6 flex items-center gap-2"><span className="material-symbols-outlined text-primary">accessibility_new</span> Bio-Metrics</h3>
+                  <h3 className="text-lg font-black mb-6 flex items-center gap-2"><span className="material-symbols-outlined text-primary">accessibility_new</span> Player DNA</h3>
                   <div className="space-y-6">
                     <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Age</span><span className="font-black text-xl">{calculateAge(formData.birthDate)}</span></div>
                     <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Height</span><span className="font-black text-xl">{formData.height || '--'} cm</span></div>
-                    <div className="flex justify-between"><span className="text-xs font-bold text-text-muted uppercase">Hand</span><span className="font-black text-xl">{formData.hand}</span></div>
+                    <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Hand</span><span className="font-black text-xl">{formData.hand}</span></div>
+                    <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Position</span><span className="font-black text-xl">{formData.courtPosition}</span></div>
+                    <div className="flex justify-between"><span className="text-xs font-bold text-text-muted uppercase">Gender</span><span className="font-black text-xl">{formData.gender === 'MALE' ? 'Male' : formData.gender === 'FEMALE' ? 'Female' : 'Other'}</span></div>
+                  </div>
+              </div>
+
+              {/* RESTORED: Contact Info Card (Private to user) */}
+              <div className="bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8">
+                  <h3 className="text-lg font-black mb-6 flex items-center gap-2"><span className="material-symbols-outlined text-primary">contact_phone</span> Contact Details</h3>
+                  <div className="space-y-6">
+                     <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-text-muted uppercase">Email</span>
+                        <p className="font-bold truncate">{formData.email}</p>
+                     </div>
+                     <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-text-muted uppercase">Phone</span>
+                        <p className="font-bold">{formData.phone || '--'}</p>
+                     </div>
                   </div>
               </div>
            </div>
@@ -377,18 +412,94 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       {activeTab === 'edit' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8">
             <div className="space-y-4">
-               <h3 className="font-black text-sm uppercase text-text-muted tracking-widest">Identity</h3>
+               <h3 className="font-black text-sm uppercase text-text-muted tracking-widest border-b border-border-dark pb-2 mb-4">Identity</h3>
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">First Name</label><input value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" /></div>
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Last Name</label><input value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" /></div>
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Nickname</label><input value={formData.nickname} onChange={(e) => setFormData({...formData, nickname: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" /></div>
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Birth Date</label><input type="date" value={formData.birthDate} onChange={(e) => setFormData({...formData, birthDate: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none text-white" /></div>
+               {/* RESTORED: Gender */}
+               <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Gender</label>
+                  <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value as Gender})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none appearance-none">
+                     <option value="MALE">Male</option>
+                     <option value="FEMALE">Female</option>
+                     <option value="OTHER">Other</option>
+                  </select>
+               </div>
             </div>
+
             <div className="space-y-4">
-               <h3 className="font-black text-sm uppercase text-text-muted tracking-widest">Location</h3>
+               <h3 className="font-black text-sm uppercase text-text-muted tracking-widest border-b border-border-dark pb-2 mb-4">Location</h3>
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Country</label><select value={formData.country} onChange={handleCountryChange} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none">{PADEL_COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}</select></div>
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Region</label><select value={formData.state} onChange={handleRegionChange} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none"><option value="">Select...</option>{currentRegions.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}</select></div>
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">City</label><input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" /></div>
             </div>
+
+            {/* RESTORED: Contact Section */}
+            <div className="space-y-4 md:col-span-2">
+               <h3 className="font-black text-sm uppercase text-text-muted tracking-widest border-b border-border-dark pb-2 mb-4">Contact</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Email (Login)</label>
+                     <input disabled value={formData.email} className="w-full bg-background-dark/50 border border-transparent rounded-xl p-3 text-sm font-bold text-text-muted opacity-70 cursor-not-allowed" />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Phone</label>
+                     <div className="flex gap-2">
+                        <div className="w-20 bg-background-dark border border-border-dark rounded-xl flex items-center justify-center text-sm font-bold text-text-muted">{dialCode}</div>
+                        <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="flex-1 bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" placeholder="912345678"/>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            {/* RESTORED: Player Config Section */}
+            <div className="space-y-4 md:col-span-2">
+               <h3 className="font-black text-sm uppercase text-text-muted tracking-widest border-b border-border-dark pb-2 mb-4">Player Config</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Height (cm)</label><input type="number" value={formData.height} onChange={(e) => setFormData({...formData, height: parseInt(e.target.value) || 0})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" /></div>
+                  <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Racket Brand</label><input value={formData.racketBrand} onChange={(e) => setFormData({...formData, racketBrand: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" placeholder="e.g. Bullpadel"/></div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Preferred Hand</label>
+                     <div className="flex gap-2">
+                        {(['RIGHT', 'LEFT'] as const).map(h => (
+                           <button key={h} onClick={() => setFormData({...formData, hand: h})} className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${formData.hand === h ? 'bg-primary text-background-dark border-primary' : 'bg-background-dark text-text-muted border-border-dark'}`}>{h}</button>
+                        ))}
+                     </div>
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Court Side</label>
+                     <div className="flex gap-2">
+                        {(['LEFT', 'RIGHT', 'BOTH'] as const).map(s => (
+                           <button key={s} onClick={() => setFormData({...formData, courtPosition: s})} className={`flex-1 py-3 rounded-xl text-xs font-bold border transition-all ${formData.courtPosition === s ? 'bg-primary text-background-dark border-primary' : 'bg-background-dark text-text-muted border-border-dark'}`}>{s}</button>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+             {/* RESTORED: Club Section */}
+            <div className="space-y-4 md:col-span-2">
+               <h3 className="font-black text-sm uppercase text-text-muted tracking-widest border-b border-border-dark pb-2 mb-4">Club & Level</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Home Club</label>
+                    <select value={formData.homeClub} onChange={(e) => setFormData({...formData, homeClub: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none appearance-none">
+                       <option value="">Select Club...</option>
+                       {PADEL_CLUBS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Division</label>
+                    <select value={formData.division} onChange={(e) => setFormData({...formData, division: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none appearance-none">
+                       <option value="M1">M1</option><option value="M2">M2</option><option value="M3">M3</option><option value="M4">M4</option><option value="M5">M5</option>
+                       <option value="F1">F1</option><option value="F2">F2</option><option value="F3">F3</option><option value="F4">F4</option><option value="F5">F5</option>
+                       <option value="MIX">MIX</option>
+                    </select>
+                  </div>
+               </div>
+            </div>
+
             <div className="md:col-span-2 flex justify-end gap-3 pt-6 border-t border-border-dark">
                <button onClick={handleSave} disabled={isSaving} className="px-8 py-3 bg-primary text-background-dark font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all w-full md:w-auto">{isSaving ? 'Saving...' : 'Save Changes'}</button>
             </div>
@@ -523,7 +634,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                                <div className="flex items-center gap-3">
                                   <img src={req.partnerProfile?.avatar} className="size-10 rounded-full" alt="avatar"/>
                                   <p className="font-bold text-sm">{req.partnerProfile?.name}</p>
-                               </div>
+                                </div>
                                <span className="text-[10px] font-black uppercase text-text-muted">Waiting...</span>
                             </div>
                          ))}
