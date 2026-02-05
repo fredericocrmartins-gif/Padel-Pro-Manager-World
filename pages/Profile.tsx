@@ -1,6 +1,6 @@
 
 import React, { useState, useId, useRef, useEffect } from 'react';
-import { UserProfile, Hand, CourtPosition, Gender, PrivacyLevel, Partnership, Brand } from '../types';
+import { UserProfile, Hand, CourtPosition, Gender, PrivacyLevel, Partnership, Brand, UserRole } from '../types';
 import { signOut, updateUserProfile, uploadAvatar, deleteAvatar, getPartners, searchUsers, sendPartnershipRequest, updatePartnershipStatus, removePartnership, getBrands } from '../lib/supabase';
 import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES, PADEL_CLUBS, PADEL_RACKET_BRANDS } from '../constants';
 // @ts-ignore
@@ -10,6 +10,7 @@ interface ProfileProps {
   user: UserProfile;
   onUpdate?: () => void; // Trigger to refresh app state
   onViewProfile: (userId: string) => void; // Callback to view other user
+  onOpenAdmin?: () => void; // Callback to open admin
 }
 
 // Expanded Color Palette for Padel Rackets
@@ -60,10 +61,11 @@ const DefaultRacketAvatar: React.FC<{ color: string }> = ({ color }) => {
   );
 };
 
-export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile }) => {
+export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile, onOpenAdmin }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'privacy' | 'partners'>('overview');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Partners State
@@ -165,7 +167,6 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
 
   // Derived Lists
   const currentRegions = PADEL_REGIONS[formData.country] || [];
-  const currentCities = formData.state ? PADEL_CITIES[formData.state] || [] : [];
   const currentCountryInfo = PADEL_COUNTRIES.find(c => c.code === formData.country);
   const dialCode = currentCountryInfo?.dialCode || '+??';
   const hasCustomAvatar = formData.avatar && !formData.avatar.includes('dicebear');
@@ -174,6 +175,12 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
   const handleSignOut = async () => {
     await signOut();
     window.location.reload();
+  };
+
+  const handleSyncProfile = async () => {
+    setIsSyncing(true);
+    if (onUpdate) await onUpdate();
+    setTimeout(() => setIsSyncing(false), 1000);
   };
 
   const handleDeleteAvatar = async () => {
@@ -349,10 +356,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
                 <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase">
                   Level {user.skillLevel}
                 </span>
-                {formData.division && (
-                  <span className="px-3 py-1 bg-surface-light text-white border border-border-dark rounded-lg text-[10px] font-black uppercase">
-                    Div {formData.division}
-                  </span>
+                {user.role === UserRole.ADMIN && (
+                    <button 
+                        onClick={onOpenAdmin}
+                        className="px-3 py-1 bg-primary text-background-dark border border-primary rounded-lg text-[10px] font-black uppercase flex items-center gap-1 hover:scale-105 transition-all shadow-md shadow-primary/20"
+                    >
+                        <span className="material-symbols-outlined text-xs">admin_panel_settings</span> Admin Panel
+                    </button>
                 )}
                 {user.isVerified && (
                   <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase flex items-center gap-1">
@@ -364,6 +374,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
         </div>
 
         <div className="flex gap-3 relative z-10 w-full md:w-auto justify-center md:justify-end">
+          <button 
+            onClick={handleSyncProfile} 
+            disabled={isSyncing}
+            className="px-4 py-3 bg-background-dark/50 text-text-muted border border-border-dark rounded-2xl hover:bg-background-dark hover:text-white transition-all flex items-center justify-center gap-2"
+            title="Refresh Profile Data"
+          >
+             <span className={`material-symbols-outlined ${isSyncing ? 'animate-spin' : ''}`}>sync</span>
+             <span className="md:hidden text-xs font-black uppercase">Sync</span>
+          </button>
+          
           <button onClick={handleSignOut} className="px-4 py-3 bg-secondary/10 text-secondary border border-secondary/20 rounded-2xl hover:bg-secondary hover:text-white transition-all flex-1 md:flex-none flex items-center justify-center gap-2">
              <span className="material-symbols-outlined">logout</span>
              <span className="md:hidden text-xs font-black uppercase">Log Out</span>

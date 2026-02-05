@@ -153,7 +153,7 @@ const App: React.FC = () => {
       case 'rankings': return <Rankings />;
       case 'tournament': return <TournamentLive />;
       case 'clubs': return <Clubs />;
-      case 'profile': return <Profile user={currentUser} onUpdate={refreshProfile} onViewProfile={handleViewProfile} />;
+      case 'profile': return <Profile user={currentUser} onUpdate={refreshProfile} onViewProfile={handleViewProfile} onOpenAdmin={() => setActiveTab('admin')} />;
       case 'admin': 
         // Security Check: Only allow ADMIN role to render the component
         if (currentUser.role === UserRole.ADMIN) {

@@ -3,82 +3,61 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { MOCK_USER, MOCK_JOIN_REQUESTS, MOCK_CLUBS_DATA, PADEL_RACKET_BRANDS } from '../constants';
 import { JoinRequest, RequestStatus, TrainingLog, UserProfile, UserRole, Club, Partnership, PrivacySettings, Brand } from '../types';
 
-// ------------------------------------------------------------------
-// CONFIGURAÇÃO DE AMBIENTE
-// ------------------------------------------------------------------
-const getEnvVar = (key: string) => {
-  try {
+// Helper to safely access environment variables
+const getEnv = (key: string) => {
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
     // @ts-ignore
-    if (typeof process !== 'undefined' && process.env && process.env[key]) return process.env[key];
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) return import.meta.env[key];
-  } catch { return undefined; }
+    return import.meta.env[key];
+  }
   return undefined;
 };
 
-const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('NEXT_PUBLIC_SUPABASE_URL');
-const supabaseKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || getEnvVar('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+const supabaseUrl = getEnv('VITE_SUPABASE_URL');
+const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
 
-const isConfigured = supabaseUrl && supabaseUrl.startsWith('http') && 
-                     supabaseKey && supabaseKey.length > 20 &&
-                     !supabaseUrl.includes('sua_url');
+export const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey;
 
-export const isSupabaseConfigured = !!isConfigured;
-
-export const supabase: SupabaseClient | null = isConfigured 
-  ? createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-        storageKey: 'padelpro-auth-token'
-      }
-    }) 
+export const supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(supabaseUrl!, supabaseAnonKey!)
   : null;
 
-if (!isConfigured) {
-  console.warn("⚠️ PadelPro: Supabase keys missing or invalid. App running in DEMO MODE with mock data.");
-}
-
-// --- HELPER FOR TIMEOUTS ---
 const promiseWithTimeout = <T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> => {
-    const timeout = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(`Timeout: ${label}`)), ms);
+    let timeoutId: any;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+            reject(new Error(`Operation timed out: ${label}`));
+        }, ms);
     });
-    return Promise.race([promise, timeout]);
+
+    return Promise.race([
+        Promise.resolve(promise).then((res) => {
+            clearTimeout(timeoutId);
+            return res;
+        }),
+        timeoutPromise
+    ]);
 };
 
 // --- AUTH FUNCTIONS ---
 
 export const signInWithEmail = async (email: string, password: string, rememberMe: boolean = true) => {
-  if (!supabase) throw new Error("Supabase not configured (Demo Mode)");
+  if (!supabase) throw new Error("Supabase not configured");
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 };
 
 export const signUpWithEmail = async (email: string, password: string, name: string) => {
-  if (!supabase) throw new Error("Supabase not configured (Demo Mode)");
+  if (!supabase) throw new Error("Supabase not configured");
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { name: name },
-      emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
-    }
-  });
-  if (error) throw error;
-  return data;
-};
-
-export const resendConfirmationEmail = async (email: string) => {
-  if (!supabase) throw new Error("Supabase not configured");
-  const { data, error } = await supabase.auth.resend({
-    type: 'signup',
-    email: email,
-    options: {
-      emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+      data: {
+        full_name: name,
+        name: name,
+      }
     }
   });
   if (error) throw error;
@@ -88,46 +67,31 @@ export const resendConfirmationEmail = async (email: string) => {
 export const signOut = async () => {
   if (!supabase) return;
   await supabase.auth.signOut();
-  if (typeof window !== 'undefined') {
-    window.localStorage.removeItem('padelpro-auth-token');
-  }
+};
+
+export const resendConfirmationEmail = async (email: string) => {
+    if (!supabase) throw new Error("Supabase not configured");
+    const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+    });
+    if (error) throw error;
 };
 
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
-  if (!supabase) return MOCK_USER; 
-
-  try {
-    // 1. Get Session with Timeout
-    // LocalStorage check usually fast, but wrap it anyway just in case storage is blocked
-    const { data: sessionData } = await promiseWithTimeout(
-        supabase.auth.getSession(), 
-        2000, 
-        'getSession'
-    ).catch(() => ({ data: { session: null } }));
-    
-    let user = sessionData?.session?.user;
-
-    // 2. If no session, try getUser with Timeout (Server Verification)
-    if (!user) {
-       const { data: authData } = await promiseWithTimeout(
-           supabase.auth.getUser(),
-           3000,
-           'getUser'
-       ).catch(() => ({ data: { user: null } }));
-       
-       user = authData?.user;
+    if (!supabase) return null;
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return null;
+        return await getUserProfileById(session.user.id);
+    } catch (e) {
+        console.error("Error getting current user:", e);
+        return null;
     }
-
-    if (!user) return null;
-
-    return getUserProfileById(user.id);
-  } catch (e) {
-    console.warn("Critical Error in getCurrentUserProfile:", e);
-    return null;
-  }
 };
 
-// Nova função para buscar QUALQUER perfil por ID
+// --- DATA FUNCTIONS ---
+
 export const getUserProfileById = async (userId: string): Promise<UserProfile | null> => {
     if (!supabase) return MOCK_USER;
 
@@ -136,11 +100,10 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
             supabase.from('profiles').select('*').eq('id', userId).single(),
             3000,
             'getProfileById'
-        );
+        ) as any;
 
         if (error || !profileData) return null;
 
-        // DEFAULT PRIVACY
         const defaultPrivacy: PrivacySettings = {
             email: 'PRIVATE',
             phone: 'PARTNERS',
@@ -149,9 +112,14 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
             activityLog: 'PRIVATE'
         };
 
+        const rawRole = profileData.role ? profileData.role.toUpperCase() : 'PLAYER';
+        const role = Object.values(UserRole).includes(rawRole as UserRole) 
+            ? (rawRole as UserRole) 
+            : UserRole.PLAYER;
+
         return {
             id: profileData.id,
-            email: profileData.email, // Note: Privacy logic handled in UI
+            email: profileData.email,
             name: profileData.name || 'Player',
             firstName: profileData.first_name,
             lastName: profileData.last_name,
@@ -172,7 +140,7 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
             avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.id}`,
             avatarColor: profileData.avatar_color || '#25f4c0',
             skillLevel: profileData.skill_level || 3.5,
-            role: (profileData.role as UserRole) || UserRole.PLAYER,
+            role: role,
             location: profileData.location || '',
             privacySettings: profileData.privacy_settings || defaultPrivacy,
             isVerified: profileData.is_verified,
@@ -214,17 +182,17 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       division: updates.division,
       location: updates.location,
       avatar_color: updates.avatarColor,
-      role: updates.role, // Allow role updates (e.g. from Admin panel)
-      is_verified: updates.isVerified, // Allow verification
+      role: updates.role,
+      is_verified: updates.isVerified,
       privacy_settings: updates.privacySettings,
       updated_at: new Date().toISOString()
     };
     
-    // Only add avatar_url if specifically updated (e.g. upload)
     if (updates.avatar) {
         dbUpdates.avatar_url = updates.avatar;
     }
 
+    // Remove undefined
     Object.keys(dbUpdates).forEach(key => dbUpdates[key] === undefined && delete dbUpdates[key]);
     
     const { error } = await supabase.from('profiles').upsert(dbUpdates);
@@ -235,8 +203,6 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
   }
 };
 
-// --- ADMIN SPECIFIC FUNCTIONS ---
-
 export const adminGetAllUsers = async (): Promise<UserProfile[]> => {
   if (!supabase) return [];
   
@@ -245,7 +211,7 @@ export const adminGetAllUsers = async (): Promise<UserProfile[]> => {
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(100); // Pagination in future
+      .limit(100);
 
     if (error) throw error;
 
@@ -256,7 +222,6 @@ export const adminGetAllUsers = async (): Promise<UserProfile[]> => {
       role: (profileData.role as UserRole) || UserRole.PLAYER,
       isVerified: profileData.is_verified,
       avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.id}`,
-      // ... mapping minimal fields needed for list
       username: '',
       skillLevel: profileData.skill_level || 3.5,
       stats: { winRate: 0, matchesPlayed: 0, elo: 0, ytdImprovement: 0 },
@@ -309,20 +274,13 @@ export const adminDeleteClub = async (clubId: string): Promise<{ success: boolea
   }
 };
 
-// ... (Rest of existing functions uploadAvatar, etc. remain unchanged)
-
 export const uploadAvatar = async (userId: string, file: File): Promise<{ url: string | null; error: string | null }> => {
   if (!supabase) {
-    // Mock upload for demo
     return { url: URL.createObjectURL(file), error: null };
   }
 
   try {
-    // SPACE SAVING: Always use 'avatar.jpg' to overwrite previous image
     const fileName = `${userId}/avatar.jpg`;
-
-    // Upload to 'avatars' bucket with UPSERT (overwrite)
-    // CACHE CONTROL = 0 prevents CDN from serving old images after update
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(fileName, file, { 
@@ -333,12 +291,11 @@ export const uploadAvatar = async (userId: string, file: File): Promise<{ url: s
 
     if (uploadError) {
       if (uploadError.message.includes("Bucket not found") || uploadError.message.includes("row-level security")) {
-        throw new Error("BUCKET ERROR: Please execute 'storage_setup.sql' in the Supabase SQL Editor to create the 'avatars' bucket and fix permissions.");
+        throw new Error("BUCKET ERROR: Please execute 'storage_setup.sql' in the Supabase SQL Editor.");
       }
       throw uploadError;
     }
 
-    // Get Public URL (Force a timestamp query param to bust cache immediately after upload)
     const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
     const publicUrlWithCacheBust = `${data.publicUrl}?t=${Date.now()}`;
     
@@ -349,7 +306,6 @@ export const uploadAvatar = async (userId: string, file: File): Promise<{ url: s
   }
 };
 
-// --- BRAND LOGO UPLOAD HELPER ---
 export const uploadBrandLogo = async (brandId: string, file: File): Promise<{ url: string | null; error: string | null }> => {
   if (!supabase) return { url: null, error: "Supabase not configured" };
 
@@ -368,7 +324,6 @@ export const uploadBrandLogo = async (brandId: string, file: File): Promise<{ ur
 
     const { data } = supabase.storage.from('brand-logos').getPublicUrl(fileName);
     
-    // Optional: Update the brand record in the DB automatically
     if (data.publicUrl) {
        await supabase.from('racket_brands').update({ logo_url: data.publicUrl }).eq('id', brandId);
     }
@@ -385,18 +340,14 @@ export const deleteAvatar = async (userId: string): Promise<{ success: boolean; 
 
   try {
     const fileName = `${userId}/avatar.jpg`;
-
-    // 1. Remove from Storage
     const { error: storageError } = await supabase.storage
       .from('avatars')
       .remove([fileName]);
 
     if (storageError) {
-      // Ignore "not found" errors, just proceed to update profile
       console.warn("Storage remove warning:", storageError.message);
     }
 
-    // 2. Update Profile to remove URL (set to null)
     const { error: dbError } = await supabase
       .from('profiles')
       .update({ avatar_url: null, updated_at: new Date().toISOString() })
@@ -411,7 +362,6 @@ export const deleteAvatar = async (userId: string): Promise<{ success: boolean; 
   }
 };
 
-// --- BRANDS FUNCTIONS ---
 export const getBrands = async (): Promise<Brand[]> => {
   if (!supabase) return PADEL_RACKET_BRANDS;
 
@@ -422,18 +372,15 @@ export const getBrands = async (): Promise<Brand[]> => {
       .order('name');
 
     if (error || !data || data.length === 0) {
-      // If table is empty or error (e.g. table doesn't exist yet), return mock constants
       return PADEL_RACKET_BRANDS; 
     }
 
-    // Map DB columns to Frontend Interface
     const dbBrands: Brand[] = data.map((b: any) => ({
       id: b.id,
       name: b.name,
       logo: b.logo_url
     }));
 
-    // Ensure 'Other' option is available
     const otherOption: Brand = { id: 'other', name: 'Other / Not Listed', logo: 'https://ui-avatars.com/api/?name=?&background=25f4c0&color=10221e&size=64' };
     
     return [...dbBrands, otherOption];
@@ -443,8 +390,6 @@ export const getBrands = async (): Promise<Brand[]> => {
     return PADEL_RACKET_BRANDS;
   }
 };
-
-// --- PARTNERSHIP FUNCTIONS ---
 
 export const searchusers = async (query: string, currentUserId: string): Promise<UserProfile[]> => {
   if (!supabase) return [];
@@ -474,14 +419,12 @@ export const searchusers = async (query: string, currentUserId: string): Promise
   }
 };
 
-// Alias for searchUsers to maintain compatibility if typo existed
 export const searchUsers = searchusers;
 
 export const getPartners = async (userId: string): Promise<Partnership[]> => {
   if (!supabase) return [];
 
   try {
-    // Fetch partnerships where user is requester OR receiver
     const { data, error } = await supabase
       .from('partnerships')
       .select(`
@@ -494,7 +437,6 @@ export const getPartners = async (userId: string): Promise<Partnership[]> => {
     if (error) throw error;
 
     return data.map((p: any) => {
-      // Determine which profile is the "other" person
       const isRequester = p.requester_id === userId;
       const partnerData = isRequester ? p.receiver : p.requester;
       
@@ -526,7 +468,6 @@ export const getPartners = async (userId: string): Promise<Partnership[]> => {
   }
 };
 
-// Check partnership status between two users
 export const getPartnershipStatus = async (userA: string, userB: string): Promise<'NONE' | 'PENDING' | 'ACCEPTED'> => {
     if (!supabase) return 'NONE';
     
@@ -585,8 +526,6 @@ export const removePartnership = async (partnershipId: string): Promise<{ succes
   }
 };
 
-
-// --- CLUB FUNCTIONS ---
 export const getClubs = async (): Promise<Club[]> => {
   if (supabase) {
     try {
@@ -594,7 +533,7 @@ export const getClubs = async (): Promise<Club[]> => {
           supabase.from('clubs').select('*'),
           3000,
           'getClubs'
-      ).catch(() => ({ data: null }));
+      ).catch(() => ({ data: null })) as any;
       
       if (data && data.length > 0) {
         return data.map((c: any) => ({
@@ -620,7 +559,6 @@ export const getClubs = async (): Promise<Club[]> => {
   return MOCK_CLUBS_DATA;
 };
 
-// --- EXISTING DATA FUNCTIONS ---
 let localTrainingLogs: TrainingLog[] = [];
 let localJoinRequests: JoinRequest[] = [...MOCK_JOIN_REQUESTS];
 
