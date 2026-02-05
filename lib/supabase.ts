@@ -120,33 +120,39 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
 
     if (!user) return null;
 
-    // 3. Get Profile with Timeout
-    let profileData: any = null;
+    return getUserProfileById(user.id);
+  } catch (e) {
+    console.warn("Critical Error in getCurrentUserProfile:", e);
+    return null;
+  }
+};
+
+// Nova função para buscar QUALQUER perfil por ID
+export const getUserProfileById = async (userId: string): Promise<UserProfile | null> => {
+    if (!supabase) return MOCK_USER;
+
     try {
-        const { data } = await promiseWithTimeout(
-            supabase.from('profiles').select('*').eq('id', user.id).single(),
+        const { data: profileData, error } = await promiseWithTimeout(
+            supabase.from('profiles').select('*').eq('id', userId).single(),
             3000,
-            'getProfile'
+            'getProfileById'
         );
-        profileData = data;
-    } catch(err) {
-        console.warn("Could not fetch full profile (using basic auth info):", err);
-    }
 
-    // DEFAULT PRIVACY
-    const defaultPrivacy: PrivacySettings = {
-      email: 'PRIVATE',
-      phone: 'PARTNERS',
-      stats: 'PUBLIC',
-      matchHistory: 'PUBLIC',
-      activityLog: 'PRIVATE'
-    };
+        if (error || !profileData) return null;
 
-    if (profileData) {
+        // DEFAULT PRIVACY
+        const defaultPrivacy: PrivacySettings = {
+            email: 'PRIVATE',
+            phone: 'PARTNERS',
+            stats: 'PUBLIC',
+            matchHistory: 'PUBLIC',
+            activityLog: 'PRIVATE'
+        };
+
         return {
             id: profileData.id,
-            email: user.email,
-            name: profileData.name || user.user_metadata?.name || 'Player',
+            email: profileData.email, // Note: Privacy logic handled in UI
+            name: profileData.name || 'Player',
             firstName: profileData.first_name,
             lastName: profileData.last_name,
             nickname: profileData.nickname,
@@ -163,39 +169,25 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
             homeClub: profileData.home_club,
             division: profileData.division,
             username: profileData.email?.split('@')[0] || 'user',
-            avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-            avatarColor: profileData.avatar_color || '#25f4c0', // Default Primary Color
+            avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData.id}`,
+            avatarColor: profileData.avatar_color || '#25f4c0',
             skillLevel: profileData.skill_level || 3.5,
             role: (profileData.role as UserRole) || UserRole.PLAYER,
             location: profileData.location || '',
             privacySettings: profileData.privacy_settings || defaultPrivacy,
+            isVerified: profileData.is_verified,
             stats: { 
-              winRate: 0, 
-              matchesPlayed: 0, 
-              elo: 1200, 
-              ytdImprovement: 0,
-              rankingPoints: profileData.ranking_points || 0
+                winRate: 0, 
+                matchesPlayed: 0, 
+                elo: 1200, 
+                ytdImprovement: 0,
+                rankingPoints: profileData.ranking_points || 0
             }
         };
+    } catch (err) {
+        console.error("Error fetching profile:", err);
+        return null;
     }
-
-    // Fallback: construct profile from Auth Metadata
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.user_metadata?.name || 'Player',
-      username: user.email?.split('@')[0] || 'user',
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-      skillLevel: 3.5,
-      role: UserRole.PLAYER,
-      location: '',
-      privacySettings: defaultPrivacy,
-      stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 }
-    };
-  } catch (e) {
-    console.warn("Critical Error in getCurrentUserProfile:", e);
-    return null;
-  }
 };
 
 export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> => {
@@ -387,6 +379,22 @@ export const getPartners = async (userId: string): Promise<Partnership[]> => {
     console.error("Get partners error:", err);
     return [];
   }
+};
+
+// Check partnership status between two users
+export const getPartnershipStatus = async (userA: string, userB: string): Promise<'NONE' | 'PENDING' | 'ACCEPTED'> => {
+    if (!supabase) return 'NONE';
+    
+    try {
+        const { data } = await supabase.from('partnerships')
+            .select('status')
+            .or(`and(requester_id.eq.${userA},receiver_id.eq.${userB}),and(requester_id.eq.${userB},receiver_id.eq.${userA})`)
+            .maybeSingle();
+            
+        return data ? data.status : 'NONE';
+    } catch {
+        return 'NONE';
+    }
 };
 
 export const sendPartnershipRequest = async (requesterId: string, receiverId: string): Promise<{ success: boolean; error?: string }> => {

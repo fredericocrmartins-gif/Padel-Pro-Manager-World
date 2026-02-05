@@ -10,6 +10,7 @@ import { Clubs } from './pages/Clubs';
 import { Login } from './pages/Login';
 import { AuthSuccess } from './pages/AuthSuccess';
 import { Profile } from './pages/Profile';
+import { PublicProfile } from './pages/PublicProfile'; // New Page
 import { supabase, getCurrentUserProfile, signOut } from './lib/supabase';
 import { UserProfile } from './types';
 import { MOCK_USER } from './constants';
@@ -19,11 +20,10 @@ const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [viewingProfileId, setViewingProfileId] = useState<string | null>(null); // New State
   const isMounted = useRef(true);
 
   // 1. ABSOLUTE SAFETY TIMER (The "Big Hammer")
-  // This effect runs independently of any auth logic. 
-  // It guarantees the loading screen disappears after 3 seconds, no matter what.
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isMounted.current) {
@@ -49,20 +49,14 @@ const App: React.FC = () => {
 
     const checkUser = async () => {
       try {
-        // 1. FAST CHECK: Local Session
         if (supabase) {
-            // We use a safe wrapper inside supabase.ts, but standard call here is fine 
-            // because the Safety Timer above protects us from hanging.
             const { data: { session } } = await supabase.auth.getSession();
-            
             if (!session) {
-                // Definitely logged out
                 if (isMounted.current) setIsLoading(false);
                 return;
             }
         }
 
-        // 2. FULL CHECK: Get profile data
         const profile = await getCurrentUserProfile();
         
         if (isMounted.current) {
@@ -77,7 +71,6 @@ const App: React.FC = () => {
 
     checkUser();
 
-    // 3. Listen for Auth changes
     if (supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
@@ -97,7 +90,6 @@ const App: React.FC = () => {
         subscription.unsubscribe();
       };
     } else {
-      // Demo Mode
       setIsLoading(false);
     }
   }, []); 
@@ -111,6 +103,20 @@ const App: React.FC = () => {
   const refreshProfile = async () => {
     const profile = await getCurrentUserProfile();
     if (profile) setUser(profile);
+  };
+
+  // Navigation Logic
+  const handleTabChange = (id: string) => {
+    setActiveTab(id);
+    setViewingProfileId(null); // Reset profile view when changing main tabs
+  };
+
+  const handleViewProfile = (targetUserId: string) => {
+    if (targetUserId === user?.id) {
+        setActiveTab('profile'); // Go to own editable profile
+    } else {
+        setViewingProfileId(targetUserId); // View other user
+    }
   };
 
   if (isLoading) {
@@ -128,18 +134,27 @@ const App: React.FC = () => {
     return <Login />;
   }
 
-  // Fallback if supabase is not configured, we might show MOCK_USER or still show login if desired.
   const currentUser = user || MOCK_USER;
 
-  // If user just verified email, show the celebration screen
   if (showWelcome && user) {
     return <AuthSuccess user={currentUser} onContinue={() => setShowWelcome(false)} />;
   }
 
   const renderContent = () => {
+    // Priority: Viewing Another User
+    if (viewingProfileId) {
+        return (
+            <PublicProfile 
+                targetUserId={viewingProfileId} 
+                currentUserId={currentUser.id} 
+                onBack={() => setViewingProfileId(null)}
+            />
+        );
+    }
+
     switch (activeTab) {
       case 'home':
-        return <Dashboard userProfile={currentUser} onStartTournament={() => setActiveTab('tournament')} />;
+        return <Dashboard userProfile={currentUser} onStartTournament={() => handleTabChange('tournament')} />;
       case 'discovery':
         return <Discovery />;
       case 'training':
@@ -151,14 +166,14 @@ const App: React.FC = () => {
       case 'clubs':
         return <Clubs />;
       case 'profile':
-        return <Profile user={currentUser} onUpdate={refreshProfile} />;
+        return <Profile user={currentUser} onUpdate={refreshProfile} onViewProfile={handleViewProfile} />;
       default:
-        return <Dashboard userProfile={currentUser} onStartTournament={() => setActiveTab('tournament')} />;
+        return <Dashboard userProfile={currentUser} onStartTournament={() => handleTabChange('tournament')} />;
     }
   };
 
   return (
-    <AppShell activeTab={activeTab} setActiveTab={setActiveTab}>
+    <AppShell activeTab={viewingProfileId ? 'profile' : activeTab} setActiveTab={handleTabChange}>
       {renderContent()}
     </AppShell>
   );

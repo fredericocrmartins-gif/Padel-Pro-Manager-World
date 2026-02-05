@@ -9,6 +9,7 @@ import imageCompression from 'browser-image-compression';
 interface ProfileProps {
   user: UserProfile;
   onUpdate?: () => void; // Trigger to refresh app state
+  onViewProfile: (userId: string) => void; // Callback to view other user
 }
 
 // Expanded Color Palette for Padel Rackets
@@ -59,7 +60,7 @@ const DefaultRacketAvatar: React.FC<{ color: string }> = ({ color }) => {
   );
 };
 
-export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
+export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'edit' | 'privacy' | 'partners'>('overview');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -575,16 +576,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                    <p className="text-center text-text-muted text-sm mt-10">No players found.</p>
                 )}
                 {searchResults.map(result => (
-                   <div key={result.id} className="flex items-center justify-between p-4 bg-background-dark rounded-2xl border border-border-dark hover:border-primary/40 transition-all">
+                   <div key={result.id} className="flex items-center justify-between p-4 bg-background-dark rounded-2xl border border-border-dark hover:border-primary/40 transition-all cursor-pointer group" onClick={() => onViewProfile(result.id)}>
                       <div className="flex items-center gap-3">
-                         <img src={result.avatar} className="size-10 rounded-full bg-surface-dark" alt="avatar"/>
+                         <img src={result.avatar} className="size-10 rounded-full bg-surface-dark object-cover" alt="avatar"/>
                          <div>
-                            <p className="font-bold text-sm">{result.name}</p>
+                            <p className="font-bold text-sm group-hover:text-primary transition-colors">{result.name}</p>
                             <p className="text-[10px] text-text-muted font-bold uppercase">Level {result.skillLevel}</p>
                          </div>
                       </div>
                       <button 
-                        onClick={() => handleSendRequest(result.id)}
+                        onClick={(e) => { e.stopPropagation(); handleSendRequest(result.id); }}
                         className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-background-dark transition-all"
                       >
                          <span className="material-symbols-outlined text-sm">person_add</span>
@@ -606,17 +607,17 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       <h4 className="text-xs font-black uppercase text-secondary mb-3 tracking-widest">Pending Requests</h4>
                       <div className="space-y-3">
                          {pendingRequests.map(req => (
-                            <div key={req.id} className="p-4 bg-background-dark rounded-2xl border border-secondary/30 flex items-center justify-between">
+                            <div key={req.id} className="p-4 bg-background-dark rounded-2xl border border-secondary/30 flex items-center justify-between cursor-pointer hover:border-secondary/50 transition-all" onClick={() => req.partnerProfile && onViewProfile(req.partnerProfile.id)}>
                                <div className="flex items-center gap-3">
-                                  <img src={req.partnerProfile?.avatar} className="size-10 rounded-full" alt="avatar"/>
+                                  <img src={req.partnerProfile?.avatar} className="size-10 rounded-full object-cover" alt="avatar"/>
                                   <div>
                                      <p className="font-bold text-sm">{req.partnerProfile?.name}</p>
                                      <p className="text-[10px] text-text-muted font-bold uppercase">Wants to connect</p>
                                   </div>
                                </div>
                                <div className="flex gap-2">
-                                  <button onClick={() => handleRemovePartner(req.id)} className="p-2 bg-secondary/10 text-secondary rounded-lg hover:bg-secondary hover:text-white transition-all"><span className="material-symbols-outlined text-sm">close</span></button>
-                                  <button onClick={() => handleAcceptRequest(req.id)} className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-background-dark transition-all"><span className="material-symbols-outlined text-sm">check</span></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleRemovePartner(req.id); }} className="p-2 bg-secondary/10 text-secondary rounded-lg hover:bg-secondary hover:text-white transition-all"><span className="material-symbols-outlined text-sm">close</span></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleAcceptRequest(req.id); }} className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary hover:text-background-dark transition-all"><span className="material-symbols-outlined text-sm">check</span></button>
                                </div>
                             </div>
                          ))}
@@ -630,11 +631,11 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                       <h4 className="text-xs font-black uppercase text-text-muted mb-3 tracking-widest">Sent Requests</h4>
                       <div className="space-y-3">
                          {sentRequests.map(req => (
-                            <div key={req.id} className="p-4 bg-background-dark/50 rounded-2xl border border-border-dark flex items-center justify-between opacity-70">
+                            <div key={req.id} className="p-4 bg-background-dark/50 rounded-2xl border border-border-dark flex items-center justify-between opacity-70 cursor-pointer hover:opacity-100 transition-all" onClick={() => req.partnerProfile && onViewProfile(req.partnerProfile.id)}>
                                <div className="flex items-center gap-3">
-                                  <img src={req.partnerProfile?.avatar} className="size-10 rounded-full" alt="avatar"/>
+                                  <img src={req.partnerProfile?.avatar} className="size-10 rounded-full object-cover" alt="avatar"/>
                                   <p className="font-bold text-sm">{req.partnerProfile?.name}</p>
-                                </div>
+                               </div>
                                <span className="text-[10px] font-black uppercase text-text-muted">Waiting...</span>
                             </div>
                          ))}
@@ -650,15 +651,15 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                    ) : (
                       <div className="space-y-3">
                          {activePartners.map(p => (
-                            <div key={p.id} className="p-4 bg-background-dark rounded-2xl border border-border-dark hover:border-primary/30 transition-all flex items-center justify-between group">
+                            <div key={p.id} className="p-4 bg-background-dark rounded-2xl border border-border-dark hover:border-primary/30 transition-all flex items-center justify-between group cursor-pointer" onClick={() => p.partnerProfile && onViewProfile(p.partnerProfile.id)}>
                                <div className="flex items-center gap-3">
-                                  <img src={p.partnerProfile?.avatar} className="size-10 rounded-full" alt="avatar"/>
+                                  <img src={p.partnerProfile?.avatar} className="size-10 rounded-full object-cover" alt="avatar"/>
                                   <div>
-                                     <p className="font-bold text-sm">{p.partnerProfile?.name}</p>
+                                     <p className="font-bold text-sm group-hover:text-primary transition-colors">{p.partnerProfile?.name}</p>
                                      <p className="text-[10px] text-text-muted font-bold uppercase">Level {p.partnerProfile?.skillLevel}</p>
                                   </div>
                                </div>
-                               <button onClick={() => handleRemovePartner(p.id)} className="p-2 text-text-muted hover:text-secondary opacity-0 group-hover:opacity-100 transition-all">
+                               <button onClick={(e) => { e.stopPropagation(); handleRemovePartner(p.id); }} className="p-2 text-text-muted hover:text-secondary opacity-0 group-hover:opacity-100 transition-all">
                                   <span className="material-symbols-outlined text-lg">person_remove</span>
                                </button>
                             </div>
