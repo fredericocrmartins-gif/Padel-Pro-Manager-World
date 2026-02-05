@@ -50,12 +50,15 @@ export const Login: React.FC = () => {
         setIsSignUp(false);
       } else {
         await signInWithEmail(email, password, rememberMe);
+        // Force refresh if app state doesn't update automatically
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
       clearTimeout(safetyTimer);
-      setLoading(false);
+      // We keep loading true if successful sign-in to prevent button flicker before reload
+      if (isSignUp) setLoading(false);
     }
   };
 

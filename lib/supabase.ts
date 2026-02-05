@@ -96,69 +96,77 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
     if (!supabase) return MOCK_USER;
 
     try {
-        let { data: profileData, error } = await promiseWithTimeout(
-            supabase.from('profiles').select('*').eq('id', userId).single(),
-            3000,
-            'getProfileById'
-        ) as any;
+        let profileData: any = null;
+        let dbError: any = null;
 
-        // --- SELF HEALING LOGIC ---
-        // If profile is missing (PGRST116 = 0 rows), try to create it manually
-        if (error && (error.code === 'PGRST116' || error.message?.includes('0 rows'))) {
-            console.warn("⚠️ User authenticated but profile missing. Attempting self-healing...");
+        // Try to fetch from DB with a tight timeout
+        try {
+            const result = await promiseWithTimeout(
+                supabase.from('profiles').select('*').eq('id', userId).single(),
+                2000, // 2s timeout
+                'getProfileById'
+            ) as any;
+            profileData = result.data;
+            dbError = result.error;
+        } catch (e) {
+            console.warn("DB Timeout or Connection Error:", e);
+            dbError = e;
+        }
+
+        // --- SURVIVAL MODE LOGIC ---
+        // If DB failed, we MUST NOT block the user. We construct a profile from the Session.
+        if (dbError || !profileData) {
+            console.warn("⚠️ Database profile missing/inaccessible. Entering Survival Mode.");
             
-            const { data: userAuth } = await supabase.auth.getUser();
-            if (userAuth.user && userAuth.user.id === userId) {
-                const newProfile = {
-                    id: userId,
-                    email: userAuth.user.email,
-                    name: userAuth.user.user_metadata?.name || userAuth.user.email?.split('@')[0] || 'Player',
-                    role: 'PLAYER',
-                    avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
-                    privacy_settings: {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            // Ensure the session matches the requested ID to avoid security issues
+            if (session && session.user && session.user.id === userId) {
+                const user = session.user;
+                const email = user.email || '';
+                
+                // FORCE ADMIN Check in Survival Mode
+                const ADMIN_EMAILS = ['fredericocrmartins@gmail.com', 'admin@padelpro.com'];
+                const isAdmin = ADMIN_EMAILS.includes(email) || email.startsWith('admin');
+
+                // Return a Constructed "In-Memory" Profile
+                return {
+                    id: user.id,
+                    email: email,
+                    name: user.user_metadata?.name || user.user_metadata?.full_name || email.split('@')[0],
+                    firstName: '',
+                    lastName: '',
+                    nickname: '',
+                    role: isAdmin ? UserRole.ADMIN : UserRole.PLAYER, // Force Admin here
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+                    avatarColor: '#25f4c0',
+                    skillLevel: 3.5,
+                    username: email.split('@')[0],
+                    location: 'Online (No DB)',
+                    isVerified: false,
+                    stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 },
+                    privacySettings: {
                         email: 'PRIVATE', phone: 'PARTNERS', stats: 'PUBLIC', 
                         matchHistory: 'PUBLIC', activityLog: 'PRIVATE'
-                    },
-                    created_at: new Date().toISOString()
+                    }
                 };
-
-                const { error: insertError } = await supabase.from('profiles').insert(newProfile);
-                
-                if (!insertError) {
-                    console.log("✅ Profile self-healed successfully.");
-                    return getUserProfileById(userId);
-                } else {
-                    console.error("❌ Failed to self-heal profile:", insertError);
-                }
             }
+            return null;
         }
-        // ---------------------------
 
-        if (error || !profileData) return null;
-
-        // --- AUTO-PROMOTE ADMIN LOGIC ---
-        // Automatically promote specific emails to ADMIN role to bypass SQL requirement
-        const ADMIN_EMAILS = ['fredericocrmartins@gmail.com'];
+        // --- NORMAL MODE (DB SUCCESS) ---
+        // --- AUTO-PROMOTE ADMIN LOGIC (DB Based) ---
+        const ADMIN_EMAILS = ['fredericocrmartins@gmail.com', 'admin@padelpro.com'];
         const email = profileData.email || '';
         const shouldBeAdmin = ADMIN_EMAILS.includes(email) || email.startsWith('admin');
 
         if (shouldBeAdmin && profileData.role !== 'ADMIN') {
             console.log(`👑 Auto-promoting ${email} to ADMIN...`);
-            // Fire and forget update to DB
+            // Fire and forget update
             supabase.from('profiles').update({ role: 'ADMIN' }).eq('id', userId).then();
-            // Force local update immediately so UI reflects it
             profileData.role = 'ADMIN';
         }
-        // --------------------------------
-
-        const defaultPrivacy: PrivacySettings = {
-            email: 'PRIVATE',
-            phone: 'PARTNERS',
-            stats: 'PUBLIC',
-            matchHistory: 'PUBLIC',
-            activityLog: 'PRIVATE'
-        };
-
+        
         const rawRole = profileData.role ? profileData.role.toUpperCase() : 'PLAYER';
         const role = Object.values(UserRole).includes(rawRole as UserRole) 
             ? (rawRole as UserRole) 
@@ -189,7 +197,7 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
             skillLevel: profileData.skill_level || 3.5,
             role: role,
             location: profileData.location || '',
-            privacySettings: profileData.privacy_settings || defaultPrivacy,
+            privacySettings: profileData.privacy_settings || { email: 'PRIVATE', phone: 'PARTNERS', stats: 'PUBLIC', matchHistory: 'PUBLIC', activityLog: 'PRIVATE' },
             isVerified: profileData.is_verified,
             stats: { 
                 winRate: 0, 
@@ -200,7 +208,7 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
             }
         };
     } catch (err) {
-        console.error("Error fetching profile:", err);
+        console.error("Critical Error fetching profile:", err);
         return null;
     }
 };
