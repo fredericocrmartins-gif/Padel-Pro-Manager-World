@@ -17,6 +17,27 @@ export type Hand = 'RIGHT' | 'LEFT';
 export type CourtPosition = 'LEFT' | 'RIGHT' | 'BOTH';
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
+// --- PRIVACY TYPES ---
+export type PrivacyLevel = 'PUBLIC' | 'PARTNERS' | 'PRIVATE';
+
+export interface PrivacySettings {
+  email: PrivacyLevel;
+  phone: PrivacyLevel;
+  stats: PrivacyLevel;
+  matchHistory: PrivacyLevel;
+  activityLog: PrivacyLevel;
+}
+
+// --- PARTNERSHIP TYPES ---
+export interface Partnership {
+  id: string;
+  requesterId: string;
+  receiverId: string;
+  status: 'PENDING' | 'ACCEPTED';
+  createdAt: string;
+  partnerProfile?: UserProfile; // Helper to display partner info
+}
+
 export interface Club {
   id: string;
   name: string;
@@ -100,6 +121,9 @@ export interface UserProfile {
   location: string; // General location string (display purpose)
   club?: string; // Legacy field, mapping to homeClub
   isVerified?: boolean;
+  
+  // Privacy
+  privacySettings?: PrivacySettings;
 }
 
 export interface MatchResult {

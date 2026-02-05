@@ -37,6 +37,9 @@ BEGIN
     -- CUSTOM AVATAR COLOR (NEW)
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_color text DEFAULT '#25f4c0';
     
+    -- PRIVACY SETTINGS (NEW JSONB)
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS privacy_settings jsonb DEFAULT '{"email": "PRIVATE", "phone": "PARTNERS", "stats": "PUBLIC", "matchHistory": "PUBLIC", "activityLog": "PRIVATE"}'::jsonb;
+
     -- Localização & Competição (NOVOS CAMPOS)
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS country text DEFAULT 'PT';
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS city text;
@@ -153,18 +156,49 @@ CREATE TABLE IF NOT EXISTS public.clubs (
 
 ALTER TABLE public.clubs ENABLE ROW LEVEL SECURITY;
 
--- Everyone can view clubs
 DROP POLICY IF EXISTS "Clubs are viewable by everyone" ON public.clubs;
 CREATE POLICY "Clubs are viewable by everyone" ON public.clubs FOR SELECT USING ( true );
-
--- Only admins/service role can insert/update (Users cannot edit clubs)
--- For now, we restrict this via RLS to effectively read-only for authenticated users, 
--- assuming admin operations happen directly in Supabase Dashboard or via a specific admin role logic not implemented yet.
 DROP POLICY IF EXISTS "No user edits on clubs" ON public.clubs;
 
 
 -- ============================================================================
--- [05] TRIGGERS & FUNCTIONS
+-- [05] PARTNERSHIPS (NEW)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.partnerships (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  requester_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  receiver_id uuid REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  status text DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED')),
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(requester_id, receiver_id) -- Prevent duplicate requests
+);
+
+ALTER TABLE public.partnerships ENABLE ROW LEVEL SECURITY;
+
+-- Users can see partnerships they are part of
+DROP POLICY IF EXISTS "Users view own partnerships" ON public.partnerships;
+CREATE POLICY "Users view own partnerships" ON public.partnerships 
+FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
+
+-- Users can insert partnership requests
+DROP POLICY IF EXISTS "Users create partnership requests" ON public.partnerships;
+CREATE POLICY "Users create partnership requests" ON public.partnerships 
+FOR INSERT WITH CHECK (auth.uid() = requester_id);
+
+-- Users can update status (accept) if they are receiver
+DROP POLICY IF EXISTS "Users accept partnerships" ON public.partnerships;
+CREATE POLICY "Users accept partnerships" ON public.partnerships 
+FOR UPDATE USING (auth.uid() = receiver_id);
+
+-- Users can delete partnerships they are involved in
+DROP POLICY IF EXISTS "Users delete partnerships" ON public.partnerships;
+CREATE POLICY "Users delete partnerships" ON public.partnerships 
+FOR DELETE USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
+
+
+-- ============================================================================
+-- [06] TRIGGERS & FUNCTIONS
 -- ============================================================================
 
 -- Função updated_at
@@ -181,12 +215,13 @@ CREATE TRIGGER on_profiles_updated BEFORE UPDATE ON public.profiles FOR EACH ROW
 -- Função New User (Sign Up)
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, name, avatar_url)
+  INSERT INTO public.profiles (id, email, name, avatar_url, privacy_settings)
   VALUES (
     new.id, 
     new.email, 
     COALESCE(new.raw_user_meta_data->>'name', 'New Player'),
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.id
+    'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.id,
+    '{"email": "PRIVATE", "phone": "PARTNERS", "stats": "PUBLIC", "matchHistory": "PUBLIC", "activityLog": "PRIVATE"}'::jsonb
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN new;

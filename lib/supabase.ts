@@ -1,7 +1,7 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { MOCK_USER, MOCK_JOIN_REQUESTS, MOCK_CLUBS_DATA } from '../constants';
-import { JoinRequest, RequestStatus, TrainingLog, UserProfile, UserRole, Club } from '../types';
+import { JoinRequest, RequestStatus, TrainingLog, UserProfile, UserRole, Club, Partnership, PrivacySettings } from '../types';
 
 // ------------------------------------------------------------------
 // CONFIGURAÇÃO DE AMBIENTE
@@ -133,6 +133,15 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
         console.warn("Could not fetch full profile (using basic auth info):", err);
     }
 
+    // DEFAULT PRIVACY
+    const defaultPrivacy: PrivacySettings = {
+      email: 'PRIVATE',
+      phone: 'PARTNERS',
+      stats: 'PUBLIC',
+      matchHistory: 'PUBLIC',
+      activityLog: 'PRIVATE'
+    };
+
     if (profileData) {
         return {
             id: profileData.id,
@@ -159,6 +168,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
             skillLevel: profileData.skill_level || 3.5,
             role: (profileData.role as UserRole) || UserRole.PLAYER,
             location: profileData.location || '',
+            privacySettings: profileData.privacy_settings || defaultPrivacy,
             stats: { 
               winRate: 0, 
               matchesPlayed: 0, 
@@ -179,6 +189,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
       skillLevel: 3.5,
       role: UserRole.PLAYER,
       location: '',
+      privacySettings: defaultPrivacy,
       stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 }
     };
   } catch (e) {
@@ -211,6 +222,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       division: updates.division,
       location: updates.location,
       avatar_color: updates.avatarColor,
+      privacy_settings: updates.privacySettings,
       updated_at: new Date().toISOString()
     };
     
@@ -297,6 +309,129 @@ export const deleteAvatar = async (userId: string): Promise<{ success: boolean; 
     return { success: false, error: error.message };
   }
 };
+
+// --- PARTNERSHIP FUNCTIONS ---
+
+export const searchUsers = async (query: string, currentUserId: string): Promise<UserProfile[]> => {
+  if (!supabase) return [];
+  if (!query || query.length < 2) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .neq('id', currentUserId)
+      .or(`name.ilike.%${query}%,nickname.ilike.%${query}%`)
+      .limit(10);
+      
+    if (error) throw error;
+    
+    return data.map((d: any) => ({
+      ...d,
+      avatar: d.avatar_url,
+      avatarColor: d.avatar_color,
+      skillLevel: d.skill_level || 3.5,
+      role: d.role,
+      stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 }
+    }));
+  } catch (err) {
+    console.error("Search users error:", err);
+    return [];
+  }
+};
+
+export const getPartners = async (userId: string): Promise<Partnership[]> => {
+  if (!supabase) return [];
+
+  try {
+    // Fetch partnerships where user is requester OR receiver
+    const { data, error } = await supabase
+      .from('partnerships')
+      .select(`
+        *,
+        requester:requester_id(id, name, avatar_url, nickname, skill_level, avatar_color),
+        receiver:receiver_id(id, name, avatar_url, nickname, skill_level, avatar_color)
+      `)
+      .or(`requester_id.eq.${userId},receiver_id.eq.${userId}`);
+
+    if (error) throw error;
+
+    return data.map((p: any) => {
+      // Determine which profile is the "other" person
+      const isRequester = p.requester_id === userId;
+      const partnerData = isRequester ? p.receiver : p.requester;
+      
+      const partnerProfile: UserProfile = {
+        id: partnerData.id,
+        name: partnerData.name,
+        nickname: partnerData.nickname,
+        avatar: partnerData.avatar_url,
+        avatarColor: partnerData.avatar_color,
+        skillLevel: partnerData.skill_level,
+        role: UserRole.PLAYER,
+        username: '',
+        location: '',
+        stats: { winRate: 0, matchesPlayed: 0, elo: 0, ytdImprovement: 0 }
+      };
+
+      return {
+        id: p.id,
+        requesterId: p.requester_id,
+        receiverId: p.receiver_id,
+        status: p.status,
+        createdAt: p.created_at,
+        partnerProfile: partnerProfile
+      };
+    });
+  } catch (err) {
+    console.error("Get partners error:", err);
+    return [];
+  }
+};
+
+export const sendPartnershipRequest = async (requesterId: string, receiverId: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: true };
+  
+  try {
+    const { error } = await supabase.from('partnerships').insert({
+      requester_id: requesterId,
+      receiver_id: receiverId,
+      status: 'PENDING'
+    });
+    
+    if (error) throw error;
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const updatePartnershipStatus = async (partnershipId: string, status: 'ACCEPTED'): Promise<{ success: boolean }> => {
+  if (!supabase) return { success: true };
+
+  try {
+    const { error } = await supabase.from('partnerships').update({ status }).eq('id', partnershipId);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error(err);
+    return { success: false };
+  }
+};
+
+export const removePartnership = async (partnershipId: string): Promise<{ success: boolean }> => {
+  if (!supabase) return { success: true };
+
+  try {
+    const { error } = await supabase.from('partnerships').delete().eq('id', partnershipId);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.error(err);
+    return { success: false };
+  }
+};
+
 
 // --- CLUB FUNCTIONS ---
 export const getClubs = async (): Promise<Club[]> => {
