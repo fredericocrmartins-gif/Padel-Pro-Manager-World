@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender } from '../types';
 import { signOut, updateUserProfile } from '../lib/supabase';
 import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES, PADEL_CLUBS } from '../constants';
@@ -20,30 +20,85 @@ const PADEL_RACKET_COLORS = [
 ];
 
 // Reusable SVG Component for the Default Avatar
-const DefaultRacketAvatar: React.FC<{ color: string }> = ({ color }) => (
-  <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="50" fill="#18302b" />
-    <g transform="translate(25, 20) scale(0.5)">
-        {/* Handle */}
-        <rect x="42" y="80" width="16" height="30" rx="4" fill="#31685a" />
-        <rect x="42" y="100" width="16" height="5" rx="1" fill="#10221e" opacity="0.5" />
-        {/* Racket Head Outline */}
-        <path d="M50 0 C25 0 10 20 10 45 C10 65 30 80 45 80 L55 80 C70 80 90 65 90 45 C90 20 75 0 50 0 Z" fill={color} />
-        {/* Inner Ring (Detail) */}
-        <path d="M50 5 C29 5 15 22 15 45 C15 62 32 75 45 75 L55 75 C68 75 85 62 85 45 C85 22 71 5 50 5 Z" fill="none" stroke="#10221e" strokeWidth="2" opacity="0.2" />
-        {/* Holes pattern */}
-        <g fill="#10221e" opacity="0.3">
-           <circle cx="50" cy="30" r="3" />
-           <circle cx="35" cy="40" r="3" />
-           <circle cx="65" cy="40" r="3" />
-           <circle cx="50" cy="50" r="3" />
-           <circle cx="35" cy="60" r="3" />
-           <circle cx="65" cy="60" r="3" />
-           <circle cx="50" cy="70" r="3" />
-        </g>
-    </g>
-  </svg>
-);
+const DefaultRacketAvatar: React.FC<{ color: string }> = ({ color }) => {
+  const maskId = useId(); // Unique ID for the mask to prevent conflicts
+  
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 256 256"
+      className="w-full h-full p-2" // Added slight padding to frame it nicely
+      aria-label="Padel racket avatar solid straight long handle overlap"
+      style={{ color: color }} // Applies the user's chosen color to currentColor
+    >
+      <defs>
+        {/* Mask for centered holes */}
+        <mask id={maskId}>
+          <rect width="256" height="256" fill="white"/>
+
+          <g fill="black">
+            {/* Row 1 */}
+            <circle cx="104" cy="56" r="7"/>
+            <circle cx="128" cy="56" r="7"/>
+            <circle cx="152" cy="56" r="7"/>
+
+            {/* Row 2 */}
+            <circle cx="92" cy="76" r="7"/>
+            <circle cx="116" cy="76" r="7"/>
+            <circle cx="140" cy="76" r="7"/>
+            <circle cx="164" cy="76" r="7"/>
+
+            {/* Row 3 */}
+            <circle cx="92" cy="100" r="7"/>
+            <circle cx="116" cy="100" r="7"/>
+            <circle cx="140" cy="100" r="7"/>
+            <circle cx="164" cy="100" r="7"/>
+
+            {/* Row 4 */}
+            <circle cx="92" cy="124" r="7"/>
+            <circle cx="116" cy="124" r="7"/>
+            <circle cx="140" cy="124" r="7"/>
+            <circle cx="164" cy="124" r="7"/>
+
+            {/* Row 5 */}
+            <circle cx="104" cy="148" r="7"/>
+            <circle cx="128" cy="148" r="7"/>
+            <circle cx="152" cy="148" r="7"/>
+          </g>
+        </mask>
+      </defs>
+
+      {/* Racket head */}
+      <g fill="currentColor" mask={`url(#${maskId})`}>
+        <path d="
+          M128 12
+          C80 12 56 48 56 96
+          C56 148 88 188 128 188
+          C168 188 200 148 200 96
+          C200 48 176 12 128 12
+          Z"/>
+      </g>
+
+      {/* Throat (kept behind handle) */}
+      <g fill="currentColor">
+        <path d="
+          M108 176
+          C118 194 124 198 128 198
+          C132 198 138 194 148 176
+          L162 176
+          C150 204 140 214 128 214
+          C116 214 106 204 94 176
+          Z"/>
+      </g>
+
+      {/* Handle drawn LAST so it overlaps the throat */}
+      <g fill="currentColor">
+        {/* Slightly higher + overlapping */}
+        <rect x="116" y="206" width="24" height="72" rx="4"/>
+      </g>
+    </svg>
+  );
+};
 
 export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -183,11 +238,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
         <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
           <div className="relative group">
              {/* Avatar Render Logic */}
-             <div className="size-28 rounded-full shadow-xl overflow-hidden bg-surface-dark border-4 border-surface-light">
+             <div className="size-28 rounded-full shadow-xl overflow-hidden bg-surface-dark border-4 border-surface-light flex items-center justify-center">
                 {hasCustomAvatar ? (
                   <img src={user.avatar} className="w-full h-full object-cover" alt="profile"/>
                 ) : (
-                  <DefaultRacketAvatar color={isEditing ? formData.avatarColor : (user.avatarColor || '#25f4c0')} />
+                  <div className="w-full h-full p-1">
+                    <DefaultRacketAvatar color={isEditing ? formData.avatarColor : (user.avatarColor || '#25f4c0')} />
+                  </div>
                 )}
              </div>
 
