@@ -104,7 +104,6 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
 
         // --- SELF HEALING LOGIC ---
         // If profile is missing (PGRST116 = 0 rows), try to create it manually
-        // This handles cases where the SQL trigger failed or didn't exist during signup
         if (error && (error.code === 'PGRST116' || error.message?.includes('0 rows'))) {
             console.warn("⚠️ User authenticated but profile missing. Attempting self-healing...");
             
@@ -123,12 +122,10 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
                     created_at: new Date().toISOString()
                 };
 
-                // Insert the missing profile
                 const { error: insertError } = await supabase.from('profiles').insert(newProfile);
                 
                 if (!insertError) {
                     console.log("✅ Profile self-healed successfully.");
-                    // Recursive call to fetch the newly created profile with correct format
                     return getUserProfileById(userId);
                 } else {
                     console.error("❌ Failed to self-heal profile:", insertError);
@@ -138,6 +135,21 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
         // ---------------------------
 
         if (error || !profileData) return null;
+
+        // --- AUTO-PROMOTE ADMIN LOGIC ---
+        // Automatically promote specific emails to ADMIN role to bypass SQL requirement
+        const ADMIN_EMAILS = ['fredericocrmartins@gmail.com'];
+        const email = profileData.email || '';
+        const shouldBeAdmin = ADMIN_EMAILS.includes(email) || email.startsWith('admin');
+
+        if (shouldBeAdmin && profileData.role !== 'ADMIN') {
+            console.log(`👑 Auto-promoting ${email} to ADMIN...`);
+            // Fire and forget update to DB
+            supabase.from('profiles').update({ role: 'ADMIN' }).eq('id', userId).then();
+            // Force local update immediately so UI reflects it
+            profileData.role = 'ADMIN';
+        }
+        // --------------------------------
 
         const defaultPrivacy: PrivacySettings = {
             email: 'PRIVATE',
