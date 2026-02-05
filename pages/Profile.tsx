@@ -203,7 +203,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     if (!file) return;
 
     setIsUploading(true);
-    console.log(`Original size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+    // console.log(`Original size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
 
     try {
       // 1. Compression Options
@@ -216,8 +216,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
 
       // 2. Compress
       const compressedFile = await imageCompression(file, options);
-      console.log(`Compressed size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+      // console.log(`Compressed size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
       
+      // DEBUG: Show alert to verify compression to the user
+      const originalSize = (file.size / 1024).toFixed(0);
+      const compressedSize = (compressedFile.size / 1024).toFixed(0);
+      alert(`📸 COMPRESSÃO BEM SUCEDIDA!\n\nAntes: ${originalSize} KB\nDepois: ${compressedSize} KB\n\nA enviar para o servidor...`);
+
       // 3. Upload
       const { url, error } = await uploadAvatar(user.id, compressedFile);
 

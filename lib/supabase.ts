@@ -237,16 +237,16 @@ export const uploadAvatar = async (userId: string, file: File): Promise<{ url: s
 
   try {
     // SPACE SAVING: Always use 'avatar.jpg' to overwrite previous image
-    // This prevents the bucket from filling up with old profile pictures.
     const fileName = `${userId}/avatar.jpg`;
 
     // Upload to 'avatars' bucket with UPSERT (overwrite)
+    // CACHE CONTROL = 0 prevents CDN from serving old images after update
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(fileName, file, { 
         upsert: true,
         contentType: 'image/jpeg',
-        cacheControl: '3600' // 1 hour cache
+        cacheControl: '0' 
       });
 
     if (uploadError) {
