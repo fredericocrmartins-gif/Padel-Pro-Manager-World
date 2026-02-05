@@ -129,12 +129,16 @@ export const PublicProfile: React.FC<PublicProfileProps> = ({ targetUserId, curr
                 )}
              </div>
           </div>
-          <div className="text-center md:text-left w-full md:w-auto">
-             <h1 className="text-2xl md:text-3xl font-black mb-1 break-words">{profile.nickname ? `"${profile.nickname}"` : profile.name}</h1>
-             <p className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
+          <div className="text-center md:text-left w-full md:w-auto flex flex-col items-center md:items-start">
+             {/* NAME DISPLAY UPDATE: 3 Lines */}
+             <h1 className="text-3xl md:text-4xl font-black leading-none tracking-tight break-words">{profile.firstName || profile.name.split(' ')[0]}</h1>
+             <h1 className="text-3xl md:text-4xl font-black leading-none tracking-tight mb-1 break-words">{profile.lastName || profile.name.split(' ').slice(1).join(' ')}</h1>
+             {profile.nickname && <p className="text-lg text-primary font-bold italic mb-2">"{profile.nickname}"</p>}
+
+             <div className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
                <span className="text-xl">{PADEL_COUNTRIES.find(c => c.code === profile.country)?.flag || '🌍'}</span>
                {profile.role} • {profile.state ? getRegionName(profile.country || 'PT', profile.state) : profile.country}
-             </p>
+             </div>
              
              <div className="flex gap-2 mt-3 justify-center md:justify-start flex-wrap">
                 <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase">

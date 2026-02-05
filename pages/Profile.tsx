@@ -297,12 +297,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
                <span className="material-symbols-outlined text-sm">photo_camera</span>
              </button>
           </div>
-          <div className="text-center md:text-left w-full md:w-auto">
-             <h1 className="text-2xl md:text-3xl font-black mb-1 break-words">{formData.nickname ? `"${formData.nickname}"` : user.name}</h1>
-             <p className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
+          <div className="text-center md:text-left w-full md:w-auto flex flex-col items-center md:items-start">
+             {/* NAME DISPLAY UPDATE: 3 Lines (First, Last, Nickname) */}
+             <h1 className="text-3xl md:text-4xl font-black leading-none tracking-tight break-words">{formData.firstName}</h1>
+             <h1 className="text-3xl md:text-4xl font-black leading-none tracking-tight mb-1 break-words">{formData.lastName}</h1>
+             {formData.nickname && <p className="text-lg text-primary font-bold italic mb-2">"{formData.nickname}"</p>}
+
+             <div className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
                <span className="text-xl">{PADEL_COUNTRIES.find(c => c.code === formData.country)?.flag || '🌍'}</span>
                {user.role} • {formData.state ? getRegionName(formData.country, formData.state) : formData.country}
-             </p>
+             </div>
              
              {/* RESTORED: Level, Division, Verification Chips */}
              <div className="flex gap-2 mt-3 justify-center md:justify-start flex-wrap">
