@@ -93,6 +93,7 @@ export interface UserProfile {
 
   username: string;
   avatar: string;
+  avatarColor?: string; // Custom color for the default racket avatar
   skillLevel: number;
   role: UserRole;
   stats: UserStats;

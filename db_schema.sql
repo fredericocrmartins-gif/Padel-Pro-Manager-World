@@ -34,6 +34,9 @@ BEGIN
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone text;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url text;
     
+    -- CUSTOM AVATAR COLOR (NEW)
+    ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_color text DEFAULT '#25f4c0';
+    
     -- Localização & Competição (NOVOS CAMPOS)
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS country text DEFAULT 'PT';
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS city text;

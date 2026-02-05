@@ -9,6 +9,42 @@ interface ProfileProps {
   onUpdate?: () => void; // Trigger to refresh app state
 }
 
+const PADEL_RACKET_COLORS = [
+  '#25f4c0', // Primary Green
+  '#f20d0d', // Secondary Red
+  '#3b82f6', // Blue
+  '#a855f7', // Purple
+  '#f97316', // Orange
+  '#ec4899', // Pink
+  '#eab308'  // Yellow
+];
+
+// Reusable SVG Component for the Default Avatar
+const DefaultRacketAvatar: React.FC<{ color: string }> = ({ color }) => (
+  <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="50" fill="#18302b" />
+    <g transform="translate(25, 20) scale(0.5)">
+        {/* Handle */}
+        <rect x="42" y="80" width="16" height="30" rx="4" fill="#31685a" />
+        <rect x="42" y="100" width="16" height="5" rx="1" fill="#10221e" opacity="0.5" />
+        {/* Racket Head Outline */}
+        <path d="M50 0 C25 0 10 20 10 45 C10 65 30 80 45 80 L55 80 C70 80 90 65 90 45 C90 20 75 0 50 0 Z" fill={color} />
+        {/* Inner Ring (Detail) */}
+        <path d="M50 5 C29 5 15 22 15 45 C15 62 32 75 45 75 L55 75 C68 75 85 62 85 45 C85 22 71 5 50 5 Z" fill="none" stroke="#10221e" strokeWidth="2" opacity="0.2" />
+        {/* Holes pattern */}
+        <g fill="#10221e" opacity="0.3">
+           <circle cx="50" cy="30" r="3" />
+           <circle cx="35" cy="40" r="3" />
+           <circle cx="65" cy="40" r="3" />
+           <circle cx="50" cy="50" r="3" />
+           <circle cx="35" cy="60" r="3" />
+           <circle cx="65" cy="60" r="3" />
+           <circle cx="50" cy="70" r="3" />
+        </g>
+    </g>
+  </svg>
+);
+
 export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,10 +66,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     country: user.country || 'PT',
     state: user.state || '', // Region/District Code
     city: user.city || '',   // Standardized Municipality
-    location: (user.location === 'Unknown' || !user.location) ? '' : user.location, // Ensure 'Unknown' is treated as empty
+    location: (user.location === 'Unknown' || !user.location) ? '' : user.location, 
     
     homeClub: user.homeClub || '',
-    division: user.division || 'M3'
+    division: user.division || 'M3',
+
+    // Visuals
+    avatarColor: user.avatarColor || '#25f4c0'
   });
 
   // Derived Lists
@@ -41,6 +80,10 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   const currentCities = formData.state ? PADEL_CITIES[formData.state] || [] : [];
   const currentCountryInfo = PADEL_COUNTRIES.find(c => c.code === formData.country);
   const dialCode = currentCountryInfo?.dialCode || '+??';
+
+  // Check if we should show the default racket or the user's custom image
+  // We treat "dicebear" URLs (the old default) as "no image set", so we show the racket instead.
+  const hasCustomAvatar = user.avatar && !user.avatar.includes('dicebear');
 
   // Handlers for Location Cascading Updates
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -87,10 +130,12 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       country: formData.country,
       state: formData.state,
       city: formData.city,
-      location: formData.location, // Save specific location here
+      location: formData.location, 
       
       homeClub: formData.homeClub,
-      division: formData.division
+      division: formData.division,
+
+      avatarColor: formData.avatarColor
     });
 
     if (result.success) {
@@ -99,6 +144,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     } else {
       let tip = "Ensure you have run the SQL script in Supabase to create the table and columns.";
       if (result.error?.includes('updated_at')) tip = "MISSING COLUMN 'updated_at'. Run the SQL script again.";
+      if (result.error?.includes('avatar_color')) tip = "MISSING COLUMN 'avatar_color'. Run the SQL script again.";
       
       alert(`Error saving profile: ${result.error}\n\n${tip}`);
     }
@@ -135,9 +181,31 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         
         <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
-          <div className="relative">
-             <img src={user.avatar} className="size-28 rounded-full border-4 border-primary shadow-xl" alt="profile"/>
-             <button className="absolute bottom-0 right-0 p-2 bg-background-dark border border-border-dark rounded-full text-text-muted hover:text-white transition-colors">
+          <div className="relative group">
+             {/* Avatar Render Logic */}
+             <div className="size-28 rounded-full shadow-xl overflow-hidden bg-surface-dark border-4 border-surface-light">
+                {hasCustomAvatar ? (
+                  <img src={user.avatar} className="w-full h-full object-cover" alt="profile"/>
+                ) : (
+                  <DefaultRacketAvatar color={isEditing ? formData.avatarColor : (user.avatarColor || '#25f4c0')} />
+                )}
+             </div>
+
+             {/* Color Picker (Only visible in edit mode) */}
+             {isEditing && !hasCustomAvatar && (
+                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-background-dark border border-border-dark rounded-full p-1 flex gap-1 shadow-xl z-20">
+                   {PADEL_RACKET_COLORS.map(c => (
+                     <button
+                       key={c}
+                       onClick={() => setFormData({...formData, avatarColor: c})}
+                       className={`size-4 rounded-full transition-transform hover:scale-125 ${formData.avatarColor === c ? 'scale-125 border border-white' : ''}`}
+                       style={{ backgroundColor: c }}
+                     />
+                   ))}
+                </div>
+             )}
+
+             <button className="absolute bottom-0 right-0 p-2 bg-background-dark border border-border-dark rounded-full text-text-muted hover:text-white transition-colors z-10">
                <span className="material-symbols-outlined text-sm">photo_camera</span>
              </button>
           </div>

@@ -155,6 +155,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
             division: profileData.division,
             username: profileData.email?.split('@')[0] || 'user',
             avatar: profileData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+            avatarColor: profileData.avatar_color || '#25f4c0', // Default Primary Color
             skillLevel: profileData.skill_level || 3.5,
             role: (profileData.role as UserRole) || UserRole.PLAYER,
             location: profileData.location || '',
@@ -209,6 +210,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       home_club: updates.homeClub,
       division: updates.division,
       location: updates.location,
+      avatar_color: updates.avatarColor, // Map frontend prop to DB column
       updated_at: new Date().toISOString()
     };
     Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key]);
