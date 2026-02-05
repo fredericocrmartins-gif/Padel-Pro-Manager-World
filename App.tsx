@@ -25,11 +25,16 @@ const App: React.FC = () => {
   const isMounted = useRef(true);
 
   // 1. ABSOLUTE SAFETY TIMER (The "Big Hammer")
+  // Forces the app to stop loading after 3 seconds no matter what, preventing white screen of death.
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isMounted.current) {
         setIsLoading((prev) => {
-          if (prev) console.warn("⚠️ PadelPro: Forced app load via safety timer");
+          if (prev) {
+             console.warn("⚠️ PadelPro: Forced app load via safety timer");
+             // If we timed out and have no user, but supabase is configured, something is wrong.
+             // We will let the Login screen show.
+          }
           return false;
         });
       }
@@ -63,8 +68,7 @@ const App: React.FC = () => {
                if (profile) {
                  setUser(profile);
                } else {
-                 // Fallback Safety: Should never happen with updated lib/supabase.ts
-                 console.error("Session exists but profile is null. App logic error.");
+                 console.error("CRITICAL: Session exists but profile is null. This should never happen with the new fallback.");
                }
                setIsLoading(false);
             }
@@ -86,10 +90,10 @@ const App: React.FC = () => {
 
     if (supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        console.log("Auth Event:", event);
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
              // Only fetch if we don't have a user or if the session user is different
              if (session && (!user || user.id !== session.user.id)) {
+                setIsLoading(true); // Briefly show loading while we fetch profile
                 const profile = await getCurrentUserProfile();
                 if (isMounted.current && profile) setUser(profile);
                 if (isMounted.current) setIsLoading(false);
