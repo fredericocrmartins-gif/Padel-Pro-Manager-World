@@ -1,5 +1,5 @@
 
-import { EventType, UserRole, UserProfile, RankingEntry, TrainingExercise, PadelEvent, JoinRequest, Club } from './types';
+import { EventType, UserRole, UserProfile, RankingEntry, TrainingExercise, PadelEvent, JoinRequest, Club, Brand } from './types';
 
 // --- GEOGRAPHICAL DATA (ISO 3166 STANDARDS) ---
 
@@ -314,6 +314,28 @@ export const PADEL_CLUBS: string[] = [
   'W Padel Country Club',
   'My Padel Center',
   'Star Padel'
+];
+
+// --- PADEL RACKET BRANDS ---
+// Using placeholder logos from ui-avatars to ensure valid images.
+// In a real scenario, these would be CDN links to actual brand logos.
+export const PADEL_RACKET_BRANDS: Brand[] = [
+  { id: 'adidas', name: 'Adidas', logo: 'https://ui-avatars.com/api/?name=Adidas&background=000&color=fff&size=64' },
+  { id: 'babolat', name: 'Babolat', logo: 'https://ui-avatars.com/api/?name=Babolat&background=00AEEF&color=fff&size=64' },
+  { id: 'black_crown', name: 'Black Crown', logo: 'https://ui-avatars.com/api/?name=BC&background=333&color=fff&size=64' },
+  { id: 'bullpadel', name: 'Bullpadel', logo: 'https://ui-avatars.com/api/?name=BP&background=E55300&color=fff&size=64' },
+  { id: 'drop_shot', name: 'Drop Shot', logo: 'https://ui-avatars.com/api/?name=DS&background=999&color=000&size=64' },
+  { id: 'dunlop', name: 'Dunlop', logo: 'https://ui-avatars.com/api/?name=Dunlop&background=000&color=FBEC5D&size=64' },
+  { id: 'head', name: 'Head', logo: 'https://ui-avatars.com/api/?name=Head&background=F60&color=fff&size=64' },
+  { id: 'kuikma', name: 'Kuikma', logo: 'https://ui-avatars.com/api/?name=Kuikma&background=0066CC&color=fff&size=64' },
+  { id: 'nox', name: 'Nox', logo: 'https://ui-avatars.com/api/?name=Nox&background=E60000&color=fff&size=64' },
+  { id: 'royal_padel', name: 'Royal Padel', logo: 'https://ui-avatars.com/api/?name=RP&background=444&color=fff&size=64' },
+  { id: 'siux', name: 'Siux', logo: 'https://ui-avatars.com/api/?name=Siux&background=000&color=fff&size=64' },
+  { id: 'starvie', name: 'StarVie', logo: 'https://ui-avatars.com/api/?name=SV&background=000&color=FFD700&size=64' },
+  { id: 'varlion', name: 'Varlion', logo: 'https://ui-avatars.com/api/?name=Varlion&background=FFCC00&color=000&size=64' },
+  { id: 'vibora', name: 'Vibor-A', logo: 'https://ui-avatars.com/api/?name=VA&background=333&color=0F0&size=64' },
+  { id: 'wilson', name: 'Wilson', logo: 'https://ui-avatars.com/api/?name=Wilson&background=C8102E&color=fff&size=64' },
+  { id: 'other', name: 'Other / Not Listed', logo: 'https://ui-avatars.com/api/?name=?&background=25f4c0&color=10221e&size=64' }
 ];
 
 // --- RICH CLUB DATA FOR CLUBS PAGE ---

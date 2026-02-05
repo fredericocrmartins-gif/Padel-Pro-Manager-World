@@ -213,3 +213,9 @@ export interface AIPersonalPlan {
   drills: string[];
   focus: string;
 }
+
+export interface Brand {
+  id: string;
+  name: string;
+  logo: string; // URL or placeholder
+}

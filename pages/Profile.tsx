@@ -2,7 +2,7 @@
 import React, { useState, useId, useRef, useEffect } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender, PrivacyLevel, Partnership } from '../types';
 import { signOut, updateUserProfile, uploadAvatar, deleteAvatar, getPartners, searchUsers, sendPartnershipRequest, updatePartnershipStatus, removePartnership } from '../lib/supabase';
-import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES, PADEL_CLUBS } from '../constants';
+import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES, PADEL_CLUBS, PADEL_RACKET_BRANDS } from '../constants';
 // @ts-ignore
 import imageCompression from 'browser-image-compression';
 
@@ -72,6 +72,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   
+  // Brand Selector Logic
+  // Check if current user brand is in the known list
+  const knownBrand = PADEL_RACKET_BRANDS.find(b => b.name === user.racketBrand);
+  const initialBrandState = knownBrand ? knownBrand.name : (user.racketBrand ? 'other' : '');
+  const [selectedBrandKey, setSelectedBrandKey] = useState(initialBrandState);
+  const [customBrandName, setCustomBrandName] = useState(!knownBrand && user.racketBrand ? user.racketBrand : '');
+
   // Form State
   const [formData, setFormData] = useState({
     firstName: user.firstName || user.name.split(' ')[0] || '',
@@ -101,6 +108,15 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
       activityLog: 'PRIVATE'
     }
   });
+
+  // Sync brand selection to formData
+  useEffect(() => {
+    if (selectedBrandKey === 'other') {
+      setFormData(prev => ({ ...prev, racketBrand: customBrandName }));
+    } else {
+      setFormData(prev => ({ ...prev, racketBrand: selectedBrandKey }));
+    }
+  }, [selectedBrandKey, customBrandName]);
 
   // Load Partners
   useEffect(() => {
@@ -191,7 +207,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
       hand: formData.hand as Hand,
       courtPosition: formData.courtPosition as CourtPosition,
       phone: formData.phone,
-      racketBrand: formData.racketBrand,
+      racketBrand: formData.racketBrand, // This is already synced via useEffect
       country: formData.country,
       state: formData.state,
       city: formData.city,
@@ -368,6 +384,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
                     <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Height</span><span className="font-black text-xl">{formData.height || '--'} cm</span></div>
                     <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Hand</span><span className="font-black text-xl">{formData.hand}</span></div>
                     <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Position</span><span className="font-black text-xl">{formData.courtPosition}</span></div>
+                    <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Racket</span><span className="font-black text-xl text-primary">{formData.racketBrand || '--'}</span></div>
                     <div className="flex justify-between"><span className="text-xs font-bold text-text-muted uppercase">Gender</span><span className="font-black text-xl">{formData.gender === 'MALE' ? 'Male' : formData.gender === 'FEMALE' ? 'Female' : 'Other'}</span></div>
                   </div>
               </div>
@@ -463,7 +480,47 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
                <h3 className="font-black text-sm uppercase text-text-muted tracking-widest border-b border-border-dark pb-2 mb-4">Player Config</h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Height (cm)</label><input type="number" value={formData.height} onChange={(e) => setFormData({...formData, height: parseInt(e.target.value) || 0})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" /></div>
-                  <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">Racket Brand</label><input value={formData.racketBrand} onChange={(e) => setFormData({...formData, racketBrand: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" placeholder="e.g. Bullpadel"/></div>
+                  
+                  {/* RACKET BRAND SELECTOR */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Racket Brand</label>
+                    <div className="relative">
+                      <select 
+                        value={selectedBrandKey} 
+                        onChange={(e) => setSelectedBrandKey(e.target.value)}
+                        className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none appearance-none"
+                      >
+                        <option value="">Select Brand...</option>
+                        {PADEL_RACKET_BRANDS.filter(b => b.id !== 'other').map(brand => (
+                          <option key={brand.id} value={brand.name}>{brand.name}</option>
+                        ))}
+                        <option value="other">Other / Not Listed</option>
+                      </select>
+                      {/* Logo Preview inside Select Area */}
+                      {selectedBrandKey && selectedBrandKey !== 'other' && (
+                        <div className="absolute top-1/2 right-8 -translate-y-1/2 pointer-events-none">
+                           <img 
+                             src={PADEL_RACKET_BRANDS.find(b => b.name === selectedBrandKey)?.logo} 
+                             alt="logo" 
+                             className="h-6 w-auto object-contain rounded-md"
+                           />
+                        </div>
+                      )}
+                      <div className="absolute top-1/2 right-3 -translate-y-1/2 pointer-events-none">
+                        <span className="material-symbols-outlined text-sm text-text-muted">expand_more</span>
+                      </div>
+                    </div>
+                    {/* Custom Brand Input if 'Other' selected */}
+                    {selectedBrandKey === 'other' && (
+                      <input 
+                        value={customBrandName} 
+                        onChange={(e) => setCustomBrandName(e.target.value)}
+                        className="w-full mt-2 bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none animate-in fade-in slide-in-from-top-2" 
+                        placeholder="Enter your custom racket brand..."
+                      />
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                      <label className="text-[10px] font-bold text-text-muted uppercase ml-2">Preferred Hand</label>
                      <div className="flex gap-2">
