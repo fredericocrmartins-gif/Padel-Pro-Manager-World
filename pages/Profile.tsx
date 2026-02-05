@@ -1,7 +1,7 @@
 
 import React, { useState, useId, useRef } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender } from '../types';
-import { signOut, updateUserProfile, uploadAvatar } from '../lib/supabase';
+import { signOut, updateUserProfile, uploadAvatar, deleteAvatar } from '../lib/supabase';
 import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES, PADEL_CLUBS } from '../constants';
 // @ts-ignore
 import imageCompression from 'browser-image-compression';
@@ -176,6 +176,28 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     window.location.reload();
   };
 
+  const handleDeleteAvatar = async () => {
+    if (!confirm("Are you sure you want to remove your profile photo and reset to default?")) return;
+    
+    setIsUploading(true); // Reuse uploading state for loading indicator
+    try {
+      const { success, error } = await deleteAvatar(user.id);
+      if (!success) throw new Error(error);
+      
+      // Reset to default Dicebear URL (which triggers the Racket view in UI logic)
+      const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+      setFormData(prev => ({ ...prev, avatar: defaultAvatar }));
+      
+      // Update global user state
+      if (onUpdate) onUpdate();
+      
+    } catch (error: any) {
+      alert(`Error removing avatar: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -313,6 +335,18 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                   </div>
                 )}
              </div>
+
+             {/* Delete Button - Only if custom avatar exists */}
+             {hasCustomAvatar && (
+               <button
+                 onClick={handleDeleteAvatar}
+                 disabled={isUploading}
+                 className="absolute top-0 right-0 p-1.5 bg-secondary text-white border border-background-dark rounded-full hover:bg-red-600 transition-colors z-20 shadow-md hover:scale-110"
+                 title="Remove Photo"
+               >
+                 <span className="material-symbols-outlined text-xs">close</span>
+               </button>
+             )}
 
              {/* Color Picker (Only visible in edit mode AND no custom avatar) */}
              {isEditing && !hasCustomAvatar && (

@@ -267,6 +267,37 @@ export const uploadAvatar = async (userId: string, file: File): Promise<{ url: s
   }
 };
 
+export const deleteAvatar = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) return { success: true };
+
+  try {
+    const fileName = `${userId}/avatar.jpg`;
+
+    // 1. Remove from Storage
+    const { error: storageError } = await supabase.storage
+      .from('avatars')
+      .remove([fileName]);
+
+    if (storageError) {
+      // Ignore "not found" errors, just proceed to update profile
+      console.warn("Storage remove warning:", storageError.message);
+    }
+
+    // 2. Update Profile to remove URL (set to null)
+    const { error: dbError } = await supabase
+      .from('profiles')
+      .update({ avatar_url: null, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (dbError) throw dbError;
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete avatar error:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 // --- CLUB FUNCTIONS ---
 export const getClubs = async (): Promise<Club[]> => {
   if (supabase) {
