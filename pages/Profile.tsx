@@ -206,12 +206,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     // console.log(`Original size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
 
     try {
-      // 1. Compression Options
+      // 1. Compression Options (Ultra Optimized for ~30KB)
       const options = {
-        maxSizeMB: 0.2, // Max size in MB (200KB)
-        maxWidthOrHeight: 800, // Max dimension
+        maxSizeMB: 0.03, // Target ~30KB
+        maxWidthOrHeight: 300, // Resize to 300px (Sufficient for avatars)
         useWebWorker: true,
-        fileType: 'image/jpeg'
+        fileType: 'image/jpeg',
+        initialQuality: 0.7 // Start at 70% quality to reach target quickly
       };
 
       // 2. Compress
@@ -219,9 +220,11 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
       // console.log(`Compressed size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
       
       // DEBUG: Show alert to verify compression to the user
-      const originalSize = (file.size / 1024).toFixed(0);
-      const compressedSize = (compressedFile.size / 1024).toFixed(0);
-      alert(`📸 COMPRESSÃO BEM SUCEDIDA!\n\nAntes: ${originalSize} KB\nDepois: ${compressedSize} KB\n\nA enviar para o servidor...`);
+      const originalSize = (file.size / 1024).toFixed(1);
+      const compressedSize = (compressedFile.size / 1024).toFixed(1);
+      
+      // Message showing the massive saving
+      alert(`📸 COMPRESSÃO REALIZADA!\n\nOriginal: ${originalSize} KB\nNova: ${compressedSize} KB\n\nQualidade otimizada para web.`);
 
       // 3. Upload
       const { url, error } = await uploadAvatar(user.id, compressedFile);
