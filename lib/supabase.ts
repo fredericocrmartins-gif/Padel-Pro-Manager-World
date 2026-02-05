@@ -271,6 +271,37 @@ export const uploadAvatar = async (userId: string, file: File): Promise<{ url: s
   }
 };
 
+// --- BRAND LOGO UPLOAD HELPER ---
+export const uploadBrandLogo = async (brandId: string, file: File): Promise<{ url: string | null; error: string | null }> => {
+  if (!supabase) return { url: null, error: "Supabase not configured" };
+
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${brandId}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('brand-logos')
+      .upload(fileName, file, {
+        upsert: true,
+        cacheControl: '3600'
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from('brand-logos').getPublicUrl(fileName);
+    
+    // Optional: Update the brand record in the DB automatically
+    if (data.publicUrl) {
+       await supabase.from('racket_brands').update({ logo_url: data.publicUrl }).eq('id', brandId);
+    }
+
+    return { url: data.publicUrl, error: null };
+  } catch (error: any) {
+    console.error("Brand logo upload error:", error);
+    return { url: null, error: error.message };
+  }
+};
+
 export const deleteAvatar = async (userId: string): Promise<{ success: boolean; error?: string }> => {
   if (!supabase) return { success: true };
 
