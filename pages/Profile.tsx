@@ -348,22 +348,29 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile,
 
              <div className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
                <span className="text-xl">{PADEL_COUNTRIES.find(c => c.code === formData.country)?.flag || '🌍'}</span>
-               {user.role} • {formData.state ? getRegionName(formData.country, formData.state) : formData.country}
+               {/* SHOW ROLE EXPLICITLY */}
+               <span className={`px-2 py-0.5 rounded text-[10px] border ${user.role === UserRole.ADMIN ? 'bg-secondary/20 text-secondary border-secondary/30' : 'bg-background-dark text-text-muted border-border-dark'}`}>
+                 {user.role}
+               </span>
+               • {formData.state ? getRegionName(formData.country, formData.state) : formData.country}
              </div>
              
-             {/* RESTORED: Level, Division, Verification Chips */}
+             {/* ADMIN DASHBOARD LINK (Explicit) */}
+             {user.role === UserRole.ADMIN && (
+                <button 
+                    onClick={onOpenAdmin}
+                    className="mt-4 px-6 py-3 bg-secondary text-white border border-secondary rounded-xl text-sm font-black uppercase flex items-center gap-2 hover:scale-105 transition-all shadow-xl shadow-secondary/30 animate-pulse"
+                >
+                    <span className="material-symbols-outlined">admin_panel_settings</span>
+                    Enter Admin Panel
+                </button>
+             )}
+
+             {/* Level, Division, Verification Chips */}
              <div className="flex gap-2 mt-3 justify-center md:justify-start flex-wrap">
                 <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-lg text-[10px] font-black uppercase">
                   Level {user.skillLevel}
                 </span>
-                {user.role === UserRole.ADMIN && (
-                    <button 
-                        onClick={onOpenAdmin}
-                        className="px-3 py-1 bg-primary text-background-dark border border-primary rounded-lg text-[10px] font-black uppercase flex items-center gap-1 hover:scale-105 transition-all shadow-md shadow-primary/20"
-                    >
-                        <span className="material-symbols-outlined text-xs">admin_panel_settings</span> Admin Panel
-                    </button>
-                )}
                 {user.isVerified && (
                   <span className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-[10px] font-black uppercase flex items-center gap-1">
                     <span className="material-symbols-outlined text-xs">verified</span> Verified
@@ -378,10 +385,10 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile,
             onClick={handleSyncProfile} 
             disabled={isSyncing}
             className="px-4 py-3 bg-background-dark/50 text-text-muted border border-border-dark rounded-2xl hover:bg-background-dark hover:text-white transition-all flex items-center justify-center gap-2"
-            title="Refresh Profile Data"
+            title="Check Permissions"
           >
              <span className={`material-symbols-outlined ${isSyncing ? 'animate-spin' : ''}`}>sync</span>
-             <span className="md:hidden text-xs font-black uppercase">Sync</span>
+             <span className="md:hidden text-xs font-black uppercase">Refresh Permissions</span>
           </button>
           
           <button onClick={handleSignOut} className="px-4 py-3 bg-secondary/10 text-secondary border border-secondary/20 rounded-2xl hover:bg-secondary hover:text-white transition-all flex-1 md:flex-none flex items-center justify-center gap-2">
