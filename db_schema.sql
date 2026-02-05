@@ -1,12 +1,81 @@
 
 -- ============================================================================
--- PADEL PRO MANAGER - SCRIPT DE REPARAÇÃO E CONFIGURAÇÃO TOTAL
+-- PADEL PRO MANAGER - SCRIPT MESTRE DE CONFIGURAÇÃO (UNIFICADO)
 -- ============================================================================
--- Executa este script no Supabase SQL Editor.
--- Ele resolve o problema de login infinito criando perfis para utilizadores existentes.
+-- Este script substitui todos os outros. Executa-o no Supabase SQL Editor.
+-- Ele cria Tabelas, Storage, Permissões e corrige utilizadores "presos".
 -- ============================================================================
 
--- 1. TABELA DE PERFIS (Correção Principal)
+-- 1. CONFIGURAÇÃO DE EXTENSÕES
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================================================
+-- 2. STORAGE (IMAGENS E AVATARES)
+-- ============================================================================
+-- Criar Buckets se não existirem
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+('avatars', 'avatars', true, 5242880, ARRAY['image/png', 'image/jpeg', 'image/webp']),
+('brand-logos', 'brand-logos', true, 5242880, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Políticas de Storage (Remover antigas primeiro para limpar)
+DROP POLICY IF EXISTS "Avatar Public View" ON storage.objects;
+DROP POLICY IF EXISTS "Avatar Auth Upload" ON storage.objects;
+DROP POLICY IF EXISTS "Avatar Owner Update" ON storage.objects;
+DROP POLICY IF EXISTS "Brand Logos Public View" ON storage.objects;
+DROP POLICY IF EXISTS "Auth Brand Logos Upload" ON storage.objects;
+
+-- Recriar Políticas
+CREATE POLICY "Avatar Public View" ON storage.objects FOR SELECT USING ( bucket_id = 'avatars' );
+CREATE POLICY "Avatar Auth Upload" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'avatars' AND auth.role() = 'authenticated' );
+CREATE POLICY "Avatar Owner Update" ON storage.objects FOR UPDATE USING ( bucket_id = 'avatars' AND auth.uid() = owner );
+CREATE POLICY "Brand Logos Public View" ON storage.objects FOR SELECT USING ( bucket_id = 'brand-logos' );
+CREATE POLICY "Auth Brand Logos Upload" ON storage.objects FOR INSERT WITH CHECK ( bucket_id = 'brand-logos' AND auth.role() = 'authenticated' );
+
+
+-- ============================================================================
+-- 3. TABELAS DE ADMINISTRAÇÃO (PAÍSES, REGIÕES, CIDADES)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.countries (
+  code text PRIMARY KEY,
+  name text NOT NULL,
+  flag text,
+  dial_code text,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.regions (
+  code text PRIMARY KEY,
+  country_code text REFERENCES public.countries(code) ON DELETE CASCADE,
+  name text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.cities (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  region_code text REFERENCES public.regions(code) ON DELETE CASCADE,
+  name text NOT NULL,
+  country_code text REFERENCES public.countries(code) ON DELETE CASCADE
+);
+
+-- Políticas Admin
+ALTER TABLE public.countries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.regions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cities ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+    create policy "Public Read Countries" on public.countries for select using (true);
+    create policy "Public Read Regions" on public.regions for select using (true);
+    create policy "Public Read Cities" on public.cities for select using (true);
+    create policy "Auth Write Countries" on public.countries for all using (auth.role() = 'authenticated');
+    create policy "Auth Write Regions" on public.regions for all using (auth.role() = 'authenticated');
+    create policy "Auth Write Cities" on public.cities for all using (auth.role() = 'authenticated');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ============================================================================
+-- 4. TABELA DE PERFIS (CORE)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   email text,
@@ -14,7 +83,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Adicionar colunas se faltarem (Safe Update)
+-- Safe Updates para adicionar colunas faltantes
 DO $$
 BEGIN
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS first_name text;
@@ -42,24 +111,22 @@ BEGIN
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_verified boolean DEFAULT false;
     ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now());
 EXCEPTION
-    WHEN duplicate_column THEN RAISE NOTICE 'Coluna já existe, a ignorar.';
+    WHEN duplicate_column THEN NULL;
 END $$;
 
--- Permissões de Segurança (RLS)
+-- Policies Profiles
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
--- Remover policies antigas para evitar conflitos e recriar as corretas
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
 CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING ( true );
-
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
 CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK ( auth.uid() = id );
-
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING ( auth.uid() = id );
 
 
--- 2. OUTRAS TABELAS ESSENCIAIS
+-- ============================================================================
+-- 5. TABELAS DA APLICAÇÃO (CLUBS, LOGS, REQUESTS, BRANDS)
+-- ============================================================================
 
 -- Training Logs
 CREATE TABLE IF NOT EXISTS public.training_logs (
@@ -87,12 +154,11 @@ CREATE TABLE IF NOT EXISTS public.join_requests (
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 ALTER TABLE public.join_requests ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Requests viewable by participants" ON public.join_requests;
-CREATE POLICY "Requests viewable by participants" ON public.join_requests FOR SELECT USING ( true );
-DROP POLICY IF EXISTS "Auth users can create requests" ON public.join_requests;
-CREATE POLICY "Auth users can create requests" ON public.join_requests FOR INSERT WITH CHECK ( auth.role() = 'authenticated' );
-DROP POLICY IF EXISTS "Users update own requests" ON public.join_requests;
-CREATE POLICY "Users update own requests" ON public.join_requests FOR UPDATE USING ( true );
+DO $$ BEGIN
+    create policy "Requests viewable by participants" ON public.join_requests FOR SELECT USING ( true );
+    create policy "Auth users can create requests" ON public.join_requests FOR INSERT WITH CHECK ( auth.role() = 'authenticated' );
+    create policy "Users update own requests" ON public.join_requests FOR UPDATE USING ( true );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Clubs
 CREATE TABLE IF NOT EXISTS public.clubs (
@@ -114,10 +180,10 @@ CREATE TABLE IF NOT EXISTS public.clubs (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 ALTER TABLE public.clubs ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Clubs are viewable by everyone" ON public.clubs;
-CREATE POLICY "Clubs are viewable by everyone" ON public.clubs FOR SELECT USING ( true );
-DROP POLICY IF EXISTS "Admins can manage clubs" ON public.clubs;
-CREATE POLICY "Admins can manage clubs" ON public.clubs FOR ALL USING ( auth.role() = 'authenticated' );
+DO $$ BEGIN
+    create policy "Clubs are viewable by everyone" ON public.clubs FOR SELECT USING ( true );
+    create policy "Admins can manage clubs" ON public.clubs FOR ALL USING ( auth.role() = 'authenticated' );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Partnerships
 CREATE TABLE IF NOT EXISTS public.partnerships (
@@ -129,14 +195,12 @@ CREATE TABLE IF NOT EXISTS public.partnerships (
   UNIQUE(requester_id, receiver_id)
 );
 ALTER TABLE public.partnerships ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Users view own partnerships" ON public.partnerships;
-CREATE POLICY "Users view own partnerships" ON public.partnerships FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
-DROP POLICY IF EXISTS "Users create partnership requests" ON public.partnerships;
-CREATE POLICY "Users create partnership requests" ON public.partnerships FOR INSERT WITH CHECK (auth.uid() = requester_id);
-DROP POLICY IF EXISTS "Users accept partnerships" ON public.partnerships;
-CREATE POLICY "Users accept partnerships" ON public.partnerships FOR UPDATE USING (auth.uid() = receiver_id);
-DROP POLICY IF EXISTS "Users delete partnerships" ON public.partnerships;
-CREATE POLICY "Users delete partnerships" ON public.partnerships FOR DELETE USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
+DO $$ BEGIN
+    create policy "Users view own partnerships" ON public.partnerships FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
+    create policy "Users create partnership requests" ON public.partnerships FOR INSERT WITH CHECK (auth.uid() = requester_id);
+    create policy "Users accept partnerships" ON public.partnerships FOR UPDATE USING (auth.uid() = receiver_id);
+    create policy "Users delete partnerships" ON public.partnerships FOR DELETE USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Racket Brands
 CREATE TABLE IF NOT EXISTS public.racket_brands (
@@ -146,12 +210,12 @@ CREATE TABLE IF NOT EXISTS public.racket_brands (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 ALTER TABLE public.racket_brands ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Brands viewable by everyone" ON public.racket_brands;
-CREATE POLICY "Brands viewable by everyone" ON public.racket_brands FOR SELECT USING ( true );
-DROP POLICY IF EXISTS "Auth users can manage brands" ON public.racket_brands;
-CREATE POLICY "Auth users can manage brands" ON public.racket_brands FOR ALL USING ( auth.role() = 'authenticated' );
+DO $$ BEGIN
+    create policy "Brands viewable by everyone" ON public.racket_brands FOR SELECT USING ( true );
+    create policy "Auth users can manage brands" ON public.racket_brands FOR ALL USING ( auth.role() = 'authenticated' );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Inserir Marcas Padrão (se não existirem)
+-- Inserir Marcas Padrão (Safe Insert)
 INSERT INTO public.racket_brands (name, logo_url) VALUES
 ('Adidas', 'https://ui-avatars.com/api/?name=Adidas&background=000&color=fff&size=64'),
 ('Babolat', 'https://ui-avatars.com/api/?name=Babolat&background=00AEEF&color=fff&size=64'),
@@ -164,9 +228,10 @@ INSERT INTO public.racket_brands (name, logo_url) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 
--- 3. AUTOMATIZAÇÕES (TRIGGERS)
+-- ============================================================================
+-- 6. TRIGGERS (AUTOMATIZAÇÃO DE PERFIS)
+-- ============================================================================
 
--- Trigger para atualizar timestamp
 CREATE OR REPLACE FUNCTION public.handle_updated_at() RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
@@ -177,7 +242,7 @@ $$ language 'plpgsql';
 DROP TRIGGER IF EXISTS on_profiles_updated ON public.profiles;
 CREATE TRIGGER on_profiles_updated BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
 
--- Trigger para criar perfil automaticamente ao registar novo user
+-- Trigger CRÍTICO para criar perfil ao registar
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, name, avatar_url, privacy_settings, role)
@@ -189,23 +254,19 @@ BEGIN
     '{"email": "PRIVATE", "phone": "PARTNERS", "stats": "PUBLIC", "matchHistory": "PUBLIC", "activityLog": "PRIVATE"}'::jsonb,
     'PLAYER'
   )
-  ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email; 
+  ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email; 
   RETURN new;
 END;
 $$ language 'plpgsql' security definer;
 
--- Recriar trigger de auth
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 
 -- ============================================================================
--- 4. A CORREÇÃO FINAL (IMPORTANTE)
+-- 7. REPARAÇÃO FINAL (BACKFILL)
 -- ============================================================================
--- Este comando encontra todos os utilizadores que estão 'presos' (existem na Auth
--- mas não têm perfil) e cria-os manualmente.
--- ============================================================================
+-- Este comando corre sempre que executas o script para garantir que ninguém fica "preso"
 INSERT INTO public.profiles (id, email, name, avatar_url, privacy_settings, role)
 SELECT 
   id, 
