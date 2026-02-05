@@ -1,7 +1,7 @@
 
 import React, { useState, useId, useRef, useEffect } from 'react';
-import { UserProfile, Hand, CourtPosition, Gender, PrivacyLevel, Partnership } from '../types';
-import { signOut, updateUserProfile, uploadAvatar, deleteAvatar, getPartners, searchUsers, sendPartnershipRequest, updatePartnershipStatus, removePartnership } from '../lib/supabase';
+import { UserProfile, Hand, CourtPosition, Gender, PrivacyLevel, Partnership, Brand } from '../types';
+import { signOut, updateUserProfile, uploadAvatar, deleteAvatar, getPartners, searchUsers, sendPartnershipRequest, updatePartnershipStatus, removePartnership, getBrands } from '../lib/supabase';
 import { PADEL_COUNTRIES, PADEL_REGIONS, PADEL_CITIES, PADEL_CLUBS, PADEL_RACKET_BRANDS } from '../constants';
 // @ts-ignore
 import imageCompression from 'browser-image-compression';
@@ -72,9 +72,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   
-  // Brand Selector Logic
-  // Check if current user brand is in the known list
-  const knownBrand = PADEL_RACKET_BRANDS.find(b => b.name === user.racketBrand);
+  // Brands State (Dynamic from DB)
+  const [availableBrands, setAvailableBrands] = useState<Brand[]>(PADEL_RACKET_BRANDS);
+
+  // Load Brands on Mount
+  useEffect(() => {
+    getBrands().then(setAvailableBrands);
+  }, []);
+
+  // Brand Selector Logic (Depends on availableBrands being loaded)
+  const knownBrand = availableBrands.find(b => b.name === user.racketBrand);
   const initialBrandState = knownBrand ? knownBrand.name : (user.racketBrand ? 'other' : '');
   const [selectedBrandKey, setSelectedBrandKey] = useState(initialBrandState);
   const [customBrandName, setCustomBrandName] = useState(!knownBrand && user.racketBrand ? user.racketBrand : '');
@@ -108,6 +115,19 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
       activityLog: 'PRIVATE'
     }
   });
+
+  // Re-sync brand selection when user changes (if props update) or brands load
+  useEffect(() => {
+    const currentBrand = availableBrands.find(b => b.name === user.racketBrand);
+    if (currentBrand) {
+        setSelectedBrandKey(currentBrand.name);
+    } else if (user.racketBrand) {
+        setSelectedBrandKey('other');
+        setCustomBrandName(user.racketBrand);
+    } else {
+        setSelectedBrandKey('');
+    }
+  }, [user.racketBrand, availableBrands]);
 
   // Sync brand selection to formData
   useEffect(() => {
@@ -491,7 +511,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
                         className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none appearance-none"
                       >
                         <option value="">Select Brand...</option>
-                        {PADEL_RACKET_BRANDS.filter(b => b.id !== 'other').map(brand => (
+                        {availableBrands.filter(b => b.id !== 'other').map(brand => (
                           <option key={brand.id} value={brand.name}>{brand.name}</option>
                         ))}
                         <option value="other">Other / Not Listed</option>
@@ -500,7 +520,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate, onViewProfile 
                       {selectedBrandKey && selectedBrandKey !== 'other' && (
                         <div className="absolute top-1/2 right-8 -translate-y-1/2 pointer-events-none">
                            <img 
-                             src={PADEL_RACKET_BRANDS.find(b => b.name === selectedBrandKey)?.logo} 
+                             src={availableBrands.find(b => b.name === selectedBrandKey)?.logo} 
                              alt="logo" 
                              className="h-6 w-auto object-contain rounded-md"
                            />

@@ -1,7 +1,7 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { MOCK_USER, MOCK_JOIN_REQUESTS, MOCK_CLUBS_DATA } from '../constants';
-import { JoinRequest, RequestStatus, TrainingLog, UserProfile, UserRole, Club, Partnership, PrivacySettings } from '../types';
+import { MOCK_USER, MOCK_JOIN_REQUESTS, MOCK_CLUBS_DATA, PADEL_RACKET_BRANDS } from '../constants';
+import { JoinRequest, RequestStatus, TrainingLog, UserProfile, UserRole, Club, Partnership, PrivacySettings, Brand } from '../types';
 
 // ------------------------------------------------------------------
 // CONFIGURAÇÃO DE AMBIENTE
@@ -302,9 +302,42 @@ export const deleteAvatar = async (userId: string): Promise<{ success: boolean; 
   }
 };
 
+// --- BRANDS FUNCTIONS ---
+export const getBrands = async (): Promise<Brand[]> => {
+  if (!supabase) return PADEL_RACKET_BRANDS;
+
+  try {
+    const { data, error } = await supabase
+      .from('racket_brands')
+      .select('*')
+      .order('name');
+
+    if (error || !data || data.length === 0) {
+      // If table is empty or error (e.g. table doesn't exist yet), return mock constants
+      return PADEL_RACKET_BRANDS; 
+    }
+
+    // Map DB columns to Frontend Interface
+    const dbBrands: Brand[] = data.map((b: any) => ({
+      id: b.id,
+      name: b.name,
+      logo: b.logo_url
+    }));
+
+    // Ensure 'Other' option is available
+    const otherOption: Brand = { id: 'other', name: 'Other / Not Listed', logo: 'https://ui-avatars.com/api/?name=?&background=25f4c0&color=10221e&size=64' };
+    
+    return [...dbBrands, otherOption];
+
+  } catch (err) {
+    console.warn("Failed to fetch brands from DB, using fallback:", err);
+    return PADEL_RACKET_BRANDS;
+  }
+};
+
 // --- PARTNERSHIP FUNCTIONS ---
 
-export const searchUsers = async (query: string, currentUserId: string): Promise<UserProfile[]> => {
+export const searchusers = async (query: string, currentUserId: string): Promise<UserProfile[]> => {
   if (!supabase) return [];
   if (!query || query.length < 2) return [];
 
@@ -331,6 +364,9 @@ export const searchUsers = async (query: string, currentUserId: string): Promise
     return [];
   }
 };
+
+// Alias for searchUsers to maintain compatibility if typo existed
+export const searchUsers = searchusers;
 
 export const getPartners = async (userId: string): Promise<Partnership[]> => {
   if (!supabase) return [];
