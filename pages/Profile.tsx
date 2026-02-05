@@ -1,3 +1,4 @@
+
 import React, { useState, useId, useRef, useEffect } from 'react';
 import { UserProfile, Hand, CourtPosition, Gender, PrivacyLevel, Partnership } from '../types';
 import { signOut, updateUserProfile, uploadAvatar, deleteAvatar, getPartners, searchUsers, sendPartnershipRequest, updatePartnershipStatus, removePartnership } from '../lib/supabase';
@@ -255,17 +256,17 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
   const activePartners = partners.filter(p => p.status === 'ACCEPTED');
 
   return (
-    <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="p-4 md:p-10 max-w-5xl mx-auto space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-24 md:pb-20">
       <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
 
       {/* Header */}
-      <header className="flex flex-col md:flex-row items-center justify-between gap-6 bg-surface-dark p-8 rounded-[3rem] border border-border-dark relative overflow-visible">
+      <header className="flex flex-col md:flex-row items-center justify-between gap-6 bg-surface-dark p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-border-dark relative overflow-visible">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         
-        <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
-          <div className="relative group">
+        <div className="flex flex-col md:flex-row items-center gap-6 relative z-10 w-full md:w-auto">
+          <div className="relative group shrink-0">
              {/* Avatar */}
-             <div className="size-28 rounded-full shadow-xl overflow-hidden bg-surface-dark border-4 border-surface-light flex items-center justify-center relative">
+             <div className="size-24 md:size-28 rounded-full shadow-xl overflow-hidden bg-surface-dark border-4 border-surface-light flex items-center justify-center relative">
                 {isUploading ? (
                   <div className="flex flex-col items-center justify-center gap-1 text-text-muted"><span className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span></div>
                 ) : hasCustomAvatar ? (
@@ -295,8 +296,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                <span className="material-symbols-outlined text-sm">photo_camera</span>
              </button>
           </div>
-          <div className="text-center md:text-left">
-             <h1 className="text-3xl font-black mb-1">{formData.nickname ? `"${formData.nickname}"` : user.name}</h1>
+          <div className="text-center md:text-left w-full md:w-auto">
+             <h1 className="text-2xl md:text-3xl font-black mb-1 break-words">{formData.nickname ? `"${formData.nickname}"` : user.name}</h1>
              <p className="text-text-muted text-sm font-bold uppercase tracking-widest flex items-center gap-2 justify-center md:justify-start">
                <span className="text-xl">{PADEL_COUNTRIES.find(c => c.code === formData.country)?.flag || '🌍'}</span>
                {user.role} • {formData.state ? getRegionName(formData.country, formData.state) : formData.country}
@@ -304,15 +305,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
           </div>
         </div>
 
-        <div className="flex gap-3 relative z-10">
-          <button onClick={handleSignOut} className="px-4 py-3 bg-secondary/10 text-secondary border border-secondary/20 rounded-2xl hover:bg-secondary hover:text-white transition-all">
+        <div className="flex gap-3 relative z-10 w-full md:w-auto justify-center md:justify-end">
+          <button onClick={handleSignOut} className="px-4 py-3 bg-secondary/10 text-secondary border border-secondary/20 rounded-2xl hover:bg-secondary hover:text-white transition-all flex-1 md:flex-none flex items-center justify-center gap-2">
              <span className="material-symbols-outlined">logout</span>
+             <span className="md:hidden text-xs font-black uppercase">Log Out</span>
           </button>
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="flex justify-center gap-2 bg-surface-dark p-1.5 rounded-2xl border border-border-dark w-fit mx-auto">
+      <div className="grid grid-cols-2 md:flex md:justify-center gap-2 bg-surface-dark p-1.5 rounded-2xl border border-border-dark w-full md:w-fit mx-auto">
         {[
           { id: 'overview', icon: 'person', label: 'Overview' },
           { id: 'edit', icon: 'edit', label: 'Edit' },
@@ -322,11 +324,11 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-6 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-2 transition-all ${
+            className={`px-4 md:px-6 py-3 md:py-2 rounded-xl text-[10px] md:text-xs font-black uppercase flex flex-col md:flex-row items-center justify-center gap-2 transition-all ${
               activeTab === tab.id ? 'bg-primary text-background-dark shadow-md' : 'text-text-muted hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-sm">{tab.icon}</span>
+            <span className="material-symbols-outlined text-lg md:text-sm">{tab.icon}</span>
             {tab.label}
           </button>
         ))}
@@ -334,9 +336,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
 
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
            <div className="space-y-6">
-              <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
+              <div className="bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8">
                   <h3 className="text-lg font-black mb-6 flex items-center gap-2"><span className="material-symbols-outlined text-primary">accessibility_new</span> Bio-Metrics</h3>
                   <div className="space-y-6">
                     <div className="flex justify-between border-b border-border-dark pb-4"><span className="text-xs font-bold text-text-muted uppercase">Age</span><span className="font-black text-xl">{calculateAge(formData.birthDate)}</span></div>
@@ -346,7 +348,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               </div>
            </div>
            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
+              <div className="bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8">
                 <h3 className="text-lg font-black mb-6">Performance Stats</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-background-dark p-4 rounded-2xl text-center">
@@ -373,7 +375,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
 
       {/* EDIT TAB */}
       {activeTab === 'edit' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-dark border border-border-dark rounded-[2.5rem] p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8">
             <div className="space-y-4">
                <h3 className="font-black text-sm uppercase text-text-muted tracking-widest">Identity</h3>
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">First Name</label><input value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" /></div>
@@ -388,14 +390,14 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
                <div className="space-y-2"><label className="text-[10px] font-bold text-text-muted uppercase ml-2">City</label><input value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} className="w-full bg-background-dark border border-border-dark rounded-xl p-3 text-sm font-bold focus:border-primary outline-none" /></div>
             </div>
             <div className="md:col-span-2 flex justify-end gap-3 pt-6 border-t border-border-dark">
-               <button onClick={handleSave} disabled={isSaving} className="px-8 py-3 bg-primary text-background-dark font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">{isSaving ? 'Saving...' : 'Save Changes'}</button>
+               <button onClick={handleSave} disabled={isSaving} className="px-8 py-3 bg-primary text-background-dark font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all w-full md:w-auto">{isSaving ? 'Saving...' : 'Save Changes'}</button>
             </div>
         </div>
       )}
 
       {/* PRIVACY TAB */}
       {activeTab === 'privacy' && (
-        <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8 max-w-3xl mx-auto">
+        <div className="bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 max-w-3xl mx-auto">
           <h3 className="text-xl font-black mb-2">Privacy Settings</h3>
           <p className="text-text-muted text-sm mb-8">Control who can see your profile information.</p>
           
@@ -407,14 +409,14 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
               { id: 'matchHistory', label: 'Match History' },
               { id: 'activityLog', label: 'Activity Logs' },
             ].map(field => (
-              <div key={field.id} className="flex items-center justify-between p-4 bg-background-dark rounded-2xl border border-border-dark">
+              <div key={field.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-background-dark rounded-2xl border border-border-dark">
                 <span className="font-bold">{field.label}</span>
                 <div className="flex bg-surface-dark p-1 rounded-xl border border-border-dark">
                   {(['PUBLIC', 'PARTNERS', 'PRIVATE'] as PrivacyLevel[]).map(level => (
                     <button
                       key={level}
                       onClick={() => setFormData(prev => ({ ...prev, privacySettings: { ...prev.privacySettings, [field.id]: level } }))}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1 ${
+                      className={`flex-1 md:flex-none px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center justify-center gap-1 ${
                         formData.privacySettings[field.id as keyof typeof formData.privacySettings] === level 
                           ? 'bg-primary text-background-dark' 
                           : 'text-text-muted hover:text-white'
@@ -431,17 +433,17 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
             ))}
           </div>
           <div className="flex justify-end pt-8">
-             <button onClick={handleSave} disabled={isSaving} className="px-8 py-3 bg-primary text-background-dark font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">{isSaving ? 'Saving...' : 'Save Preferences'}</button>
+             <button onClick={handleSave} disabled={isSaving} className="px-8 py-3 bg-primary text-background-dark font-black rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all w-full md:w-auto">{isSaving ? 'Saving...' : 'Save Preferences'}</button>
           </div>
         </div>
       )}
 
       {/* PARTNERS TAB */}
       {activeTab === 'partners' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
           
           {/* Left: Find Partners */}
-          <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8 flex flex-col h-[600px]">
+          <div className="bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 flex flex-col h-[500px] md:h-[600px]">
              <h3 className="text-xl font-black mb-2">Find Partners</h3>
              <p className="text-text-muted text-sm mb-6">Search for players by name or nickname.</p>
              
@@ -482,7 +484,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
           </div>
 
           {/* Right: My Network */}
-          <div className="bg-surface-dark border border-border-dark rounded-[2.5rem] p-8 flex flex-col h-[600px]">
+          <div className="bg-surface-dark border border-border-dark rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 flex flex-col h-[500px] md:h-[600px]">
              <h3 className="text-xl font-black mb-6">My Network</h3>
              
              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6">
