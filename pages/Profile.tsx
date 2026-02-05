@@ -9,14 +9,22 @@ interface ProfileProps {
   onUpdate?: () => void; // Trigger to refresh app state
 }
 
+// Expanded Color Palette for Padel Rackets
 const PADEL_RACKET_COLORS = [
-  '#25f4c0', // Primary Green
-  '#f20d0d', // Secondary Red
-  '#3b82f6', // Blue
+  '#25f4c0', // Primary Green (PadelPro)
+  '#10b981', // Emerald
+  '#3b82f6', // Bright Blue
+  '#6366f1', // Indigo
+  '#8b5cf6', // Violet
   '#a855f7', // Purple
-  '#f97316', // Orange
+  '#d946ef', // Fuchsia
   '#ec4899', // Pink
-  '#eab308'  // Yellow
+  '#f43f5e', // Rose
+  '#f20d0d', // Red (Secondary)
+  '#f97316', // Orange
+  '#eab308', // Yellow
+  '#84cc16', // Lime
+  '#64748b', // Slate Grey
 ];
 
 // Reusable SVG Component for the Default Avatar
@@ -232,7 +240,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
     <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       
       {/* Header */}
-      <header className="flex flex-col md:flex-row items-center justify-between gap-6 bg-surface-dark p-8 rounded-[3rem] border border-border-dark relative overflow-hidden">
+      <header className="flex flex-col md:flex-row items-center justify-between gap-6 bg-surface-dark p-8 rounded-[3rem] border border-border-dark relative overflow-visible">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         
         <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
@@ -250,19 +258,28 @@ export const Profile: React.FC<ProfileProps> = ({ user, onUpdate }) => {
 
              {/* Color Picker (Only visible in edit mode) */}
              {isEditing && !hasCustomAvatar && (
-                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-background-dark border border-border-dark rounded-full p-1 flex gap-1 shadow-xl z-20">
-                   {PADEL_RACKET_COLORS.map(c => (
-                     <button
-                       key={c}
-                       onClick={() => setFormData({...formData, avatarColor: c})}
-                       className={`size-4 rounded-full transition-transform hover:scale-125 ${formData.avatarColor === c ? 'scale-125 border border-white' : ''}`}
-                       style={{ backgroundColor: c }}
-                     />
-                   ))}
+                <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 bg-surface-dark border border-border-dark rounded-2xl p-2 shadow-2xl z-50 animate-in zoom-in duration-200">
+                   <div className="grid grid-cols-7 gap-1.5 w-max">
+                     {PADEL_RACKET_COLORS.map(c => (
+                       <button
+                         key={c}
+                         onClick={() => setFormData({...formData, avatarColor: c})}
+                         className={`size-5 rounded-full transition-transform hover:scale-125 ${formData.avatarColor === c ? 'scale-110 ring-2 ring-white ring-offset-1 ring-offset-surface-dark' : 'hover:ring-1 hover:ring-white/50'}`}
+                         style={{ backgroundColor: c }}
+                         title={c}
+                       />
+                     ))}
+                   </div>
+                   {/* Triangle pointer */}
+                   <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-surface-dark border-t border-l border-border-dark rotate-45"></div>
                 </div>
              )}
 
-             <button className="absolute bottom-0 right-0 p-2 bg-background-dark border border-border-dark rounded-full text-text-muted hover:text-white transition-colors z-10">
+             <button 
+               onClick={() => alert("Image upload coming soon! For now, customize your racket color.")}
+               className="absolute bottom-0 right-0 p-2 bg-background-dark border border-border-dark rounded-full text-text-muted hover:text-white transition-colors z-10"
+               title="Upload Image (Coming Soon)"
+             >
                <span className="material-symbols-outlined text-sm">photo_camera</span>
              </button>
           </div>
