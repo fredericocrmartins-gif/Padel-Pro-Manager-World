@@ -11,7 +11,7 @@ import { Login } from './pages/Login';
 import { AuthSuccess } from './pages/AuthSuccess';
 import { Profile } from './pages/Profile';
 import { PublicProfile } from './pages/PublicProfile';
-import { AdminDashboard } from './pages/AdminDashboard'; // Updated Import
+import { AdminDashboard } from './pages/AdminDashboard';
 import { supabase, getCurrentUserProfile, signOut } from './lib/supabase';
 import { UserProfile, UserRole } from './types';
 import { MOCK_USER } from './constants';
@@ -56,13 +56,25 @@ const App: React.FC = () => {
                 if (isMounted.current) setIsLoading(false);
                 return;
             }
-        }
-
-        const profile = await getCurrentUserProfile();
-        
-        if (isMounted.current) {
-          if (profile) setUser(profile);
-          setIsLoading(false);
+            // Session exists, we must get a user
+            const profile = await getCurrentUserProfile();
+            
+            if (isMounted.current) {
+               if (profile) {
+                 setUser(profile);
+               } else {
+                 // Fallback Safety: Should never happen with updated lib/supabase.ts
+                 console.error("Session exists but profile is null. App logic error.");
+               }
+               setIsLoading(false);
+            }
+        } else {
+          // Mock Mode
+          const profile = await getCurrentUserProfile();
+          if (isMounted.current) {
+            if (profile) setUser(profile);
+            setIsLoading(false);
+          }
         }
       } catch (error) {
         console.error("Failed to check user session:", error);
@@ -74,15 +86,19 @@ const App: React.FC = () => {
 
     if (supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-           if (!user) {
-             const profile = await getCurrentUserProfile();
-             if (isMounted.current && profile) setUser(profile);
-           }
+        console.log("Auth Event:", event);
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+             // Only fetch if we don't have a user or if the session user is different
+             if (session && (!user || user.id !== session.user.id)) {
+                const profile = await getCurrentUserProfile();
+                if (isMounted.current && profile) setUser(profile);
+                if (isMounted.current) setIsLoading(false);
+             }
         } else if (event === 'SIGNED_OUT') {
           if (isMounted.current) {
              setUser(null);
              setShowWelcome(false);
+             setIsLoading(false);
           }
         }
       });

@@ -78,12 +78,50 @@ export const resendConfirmationEmail = async (email: string) => {
     if (error) throw error;
 };
 
+// CRITICAL FIX: Ensure this function ALWAYS returns a profile if session exists
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
     if (!supabase) return null;
     try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return null;
-        return await getUserProfileById(session.user.id);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session?.user) {
+            return null;
+        }
+
+        // 1. Try to fetch real profile from DB
+        let profile = await getUserProfileById(session.user.id);
+
+        // 2. If DB returned null (missing row or error), CONSTRUCT FALLBACK HERE
+        if (!profile) {
+            console.warn("⚠️ Profile missing in DB. Constructing fallback from Session.");
+            const user = session.user;
+            const email = user.email || '';
+            const ADMIN_EMAILS = ['fredericocrmartins@gmail.com', 'admin@padelpro.com'];
+            const isAdmin = ADMIN_EMAILS.includes(email) || email.startsWith('admin');
+
+            profile = {
+                id: user.id,
+                email: email,
+                name: user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || 'Player',
+                firstName: '',
+                lastName: '',
+                nickname: '',
+                role: isAdmin ? UserRole.ADMIN : UserRole.PLAYER,
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+                avatarColor: '#25f4c0',
+                skillLevel: 3.5,
+                username: email.split('@')[0],
+                location: '',
+                isVerified: false,
+                stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 },
+                privacySettings: {
+                    email: 'PRIVATE', phone: 'PARTNERS', stats: 'PUBLIC', 
+                    matchHistory: 'PUBLIC', activityLog: 'PRIVATE'
+                }
+            };
+        }
+
+        return profile;
     } catch (e) {
         console.error("Error getting current user:", e);
         return null;
@@ -97,72 +135,30 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
 
     try {
         let profileData: any = null;
-        let dbError: any = null;
 
-        // Try to fetch from DB with a tight timeout
+        // Try to fetch from DB with timeout
         try {
             const result = await promiseWithTimeout(
                 supabase.from('profiles').select('*').eq('id', userId).single(),
-                2000, // 2s timeout
+                2000, 
                 'getProfileById'
             ) as any;
-            profileData = result.data;
-            dbError = result.error;
-        } catch (e) {
-            console.warn("DB Timeout or Connection Error:", e);
-            dbError = e;
-        }
-
-        // --- SURVIVAL MODE LOGIC ---
-        // If DB failed, we MUST NOT block the user. We construct a profile from the Session.
-        if (dbError || !profileData) {
-            console.warn("⚠️ Database profile missing/inaccessible. Entering Survival Mode.");
             
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            // Ensure the session matches the requested ID to avoid security issues
-            if (session && session.user && session.user.id === userId) {
-                const user = session.user;
-                const email = user.email || '';
-                
-                // FORCE ADMIN Check in Survival Mode
-                const ADMIN_EMAILS = ['fredericocrmartins@gmail.com', 'admin@padelpro.com'];
-                const isAdmin = ADMIN_EMAILS.includes(email) || email.startsWith('admin');
-
-                // Return a Constructed "In-Memory" Profile
-                return {
-                    id: user.id,
-                    email: email,
-                    name: user.user_metadata?.name || user.user_metadata?.full_name || email.split('@')[0],
-                    firstName: '',
-                    lastName: '',
-                    nickname: '',
-                    role: isAdmin ? UserRole.ADMIN : UserRole.PLAYER, // Force Admin here
-                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
-                    avatarColor: '#25f4c0',
-                    skillLevel: 3.5,
-                    username: email.split('@')[0],
-                    location: 'Online (No DB)',
-                    isVerified: false,
-                    stats: { winRate: 0, matchesPlayed: 0, elo: 1200, ytdImprovement: 0 },
-                    privacySettings: {
-                        email: 'PRIVATE', phone: 'PARTNERS', stats: 'PUBLIC', 
-                        matchHistory: 'PUBLIC', activityLog: 'PRIVATE'
-                    }
-                };
+            if (!result.error && result.data) {
+                profileData = result.data;
             }
-            return null;
+        } catch (e) {
+            console.warn("DB fetch failed, skipping to fallback");
         }
 
-        // --- NORMAL MODE (DB SUCCESS) ---
-        // --- AUTO-PROMOTE ADMIN LOGIC (DB Based) ---
+        if (!profileData) return null; // Let getCurrentUserProfile handle the fallback
+
+        // --- AUTO-PROMOTE ADMIN LOGIC ---
         const ADMIN_EMAILS = ['fredericocrmartins@gmail.com', 'admin@padelpro.com'];
         const email = profileData.email || '';
         const shouldBeAdmin = ADMIN_EMAILS.includes(email) || email.startsWith('admin');
 
         if (shouldBeAdmin && profileData.role !== 'ADMIN') {
-            console.log(`👑 Auto-promoting ${email} to ADMIN...`);
-            // Fire and forget update
             supabase.from('profiles').update({ role: 'ADMIN' }).eq('id', userId).then();
             profileData.role = 'ADMIN';
         }
@@ -208,7 +204,6 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
             }
         };
     } catch (err) {
-        console.error("Critical Error fetching profile:", err);
         return null;
     }
 };
