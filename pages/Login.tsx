@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { signInWithEmail, signUpWithEmail, resendConfirmationEmail } from '../lib/supabase';
+import { signInWithEmail, signUpWithEmail, resendConfirmationEmail, signOut } from '../lib/supabase';
 
 export const Login: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -77,6 +77,11 @@ export const Login: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForceLogout = async () => {
+    await signOut();
+    window.location.reload();
   };
 
   // Cooldown timer effect
@@ -221,9 +226,17 @@ export const Login: React.FC = () => {
           </button>
         </form>
 
-        <p className="text-center text-[10px] text-text-muted mt-6 uppercase tracking-widest">
-          {isSignUp ? 'Join the community today' : 'Welcome back, Champion'}
-        </p>
+        <div className="mt-8 text-center border-t border-border-dark pt-4">
+             <button 
+                onClick={handleForceLogout}
+                className="text-[10px] font-bold uppercase text-text-muted hover:text-white underline"
+             >
+                Stuck? Reset Login
+             </button>
+             <p className="text-[10px] text-text-muted mt-2 uppercase tracking-widest">
+                {isSignUp ? 'Join the community today' : 'Welcome back, Champion'}
+             </p>
+        </div>
       </div>
     </div>
   );

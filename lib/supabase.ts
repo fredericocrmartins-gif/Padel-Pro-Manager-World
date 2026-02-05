@@ -67,6 +67,8 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 export const signOut = async () => {
   if (!supabase) return;
   await supabase.auth.signOut();
+  // Clear local storage manually to be safe
+  localStorage.clear();
 };
 
 export const resendConfirmationEmail = async (email: string) => {
@@ -91,14 +93,16 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
         // 1. Try to fetch real profile from DB
         let profile = await getUserProfileById(session.user.id);
 
-        // 2. If DB returned null (missing row or error), CONSTRUCT FALLBACK HERE
+        // 2. FORCE FALLBACK: If DB returned null (missing row, RLS error, or table missing)
+        // We construct a profile from the Auth Session so the user can enter the app.
         if (!profile) {
-            console.warn("⚠️ Profile missing in DB. Constructing fallback from Session.");
+            console.warn("⚠️ CRITICAL: Profile missing in DB. Constructing emergency fallback from Session.");
             const user = session.user;
             const email = user.email || '';
             const ADMIN_EMAILS = ['fredericocrmartins@gmail.com', 'admin@padelpro.com'];
             const isAdmin = ADMIN_EMAILS.includes(email) || email.startsWith('admin');
 
+            // Construct valid profile object
             profile = {
                 id: user.id,
                 email: email,
@@ -119,6 +123,12 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
                     matchHistory: 'PUBLIC', activityLog: 'PRIVATE'
                 }
             };
+
+            // Attempt to self-heal: Create the missing row in the background
+            updateUserProfile(user.id, { name: profile.name, email: profile.email }).then(res => {
+                if(res.success) console.log("✅ Self-healing: Profile created successfully.");
+                else console.error("❌ Self-healing failed:", res.error);
+            });
         }
 
         return profile;
@@ -146,12 +156,14 @@ export const getUserProfileById = async (userId: string): Promise<UserProfile | 
             
             if (!result.error && result.data) {
                 profileData = result.data;
+            } else if (result.error) {
+                 console.warn("DB Fetch Error:", result.error.message);
             }
         } catch (e) {
-            console.warn("DB fetch failed, skipping to fallback");
+            console.warn("DB fetch failed/timed out, skipping to fallback");
         }
 
-        if (!profileData) return null; // Let getCurrentUserProfile handle the fallback
+        if (!profileData) return null; // Pass to getCurrentUserProfile fallback logic
 
         // --- AUTO-PROMOTE ADMIN LOGIC ---
         const ADMIN_EMAILS = ['fredericocrmartins@gmail.com', 'admin@padelpro.com'];
@@ -214,6 +226,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
   try {
     const dbUpdates: any = {
       id: userId,
+      email: updates.email,
       name: updates.name,
       first_name: updates.firstName,
       last_name: updates.lastName,
@@ -245,6 +258,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
     // Remove undefined
     Object.keys(dbUpdates).forEach(key => dbUpdates[key] === undefined && delete dbUpdates[key]);
     
+    // Using upsert to create if missing
     const { error } = await supabase.from('profiles').upsert(dbUpdates);
     if (error) return { success: false, error: error.message };
     return { success: true };
@@ -341,7 +355,7 @@ export const uploadAvatar = async (userId: string, file: File): Promise<{ url: s
 
     if (uploadError) {
       if (uploadError.message.includes("Bucket not found") || uploadError.message.includes("row-level security")) {
-        throw new Error("BUCKET ERROR: Please execute 'storage_setup.sql' in the Supabase SQL Editor.");
+        throw new Error("BUCKET ERROR: Please execute 'db_schema.sql' in the Supabase SQL Editor.");
       }
       throw uploadError;
     }
