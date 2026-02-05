@@ -236,22 +236,31 @@ export const uploadAvatar = async (userId: string, file: File): Promise<{ url: s
   }
 
   try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
+    // SPACE SAVING: Always use 'avatar.jpg' to overwrite previous image
+    // This prevents the bucket from filling up with old profile pictures.
+    const fileName = `${userId}/avatar.jpg`;
 
-    // Upload to 'avatars' bucket
+    // Upload to 'avatars' bucket with UPSERT (overwrite)
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(filePath, file, { upsert: true });
+      .upload(fileName, file, { 
+        upsert: true,
+        contentType: 'image/jpeg',
+        cacheControl: '3600' // 1 hour cache
+      });
 
     if (uploadError) {
+      if (uploadError.message.includes("Bucket not found") || uploadError.message.includes("row-level security")) {
+        throw new Error("BUCKET ERROR: Please execute 'storage_setup.sql' in the Supabase SQL Editor to create the 'avatars' bucket and fix permissions.");
+      }
       throw uploadError;
     }
 
-    // Get Public URL
-    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    return { url: data.publicUrl, error: null };
+    // Get Public URL (Force a timestamp query param to bust cache immediately after upload)
+    const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+    const publicUrlWithCacheBust = `${data.publicUrl}?t=${Date.now()}`;
+    
+    return { url: publicUrlWithCacheBust, error: null };
   } catch (error: any) {
     console.error("Upload error:", error);
     return { url: null, error: error.message };
